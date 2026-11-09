@@ -1,0 +1,38 @@
+{
+  "name": "south-view",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.19.0",
+  "engines": {
+    "node": ">=22.21.0",
+    "pnpm": ">=11.19.0 <12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @southview/nextjs dev",
+    "build": "turbo run build",
+    "start": "pnpm --filter @southview/nextjs start",
+    "typecheck": "turbo run typecheck",
+    "test": "tsx --test tests/*.test.ts",
+    "check": "pnpm typecheck && pnpm test && pnpm build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "pnpm --filter @southview/db migrate",
+    "db:backfill-places": "pnpm --filter @southview/db places:backfill",
+    "db:restore-persons": "pnpm --filter @southview/db persons:restore",
+    "db:seed": "pnpm --filter @southview/db seed",
+    "reviewer:grant": "pnpm --filter @southview/services grant-reviewer",
+    "storage:check": "pnpm --filter @southview/services check-storage"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@southview/api": "workspace:*",
+    "@southview/db": "workspace:*",
+    "@southview/services": "workspace:*",
+    "@southview/validators": "workspace:*",
+    "@types/node": "^22.18.12",
+    "prettier": "3.6.2",
+    "tsx": "4.23.15",
+    "turbo": "2.11.7",
+    "typescript": "5.9.3"
+  }
+}

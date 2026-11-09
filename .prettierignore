@@ -1,0 +1,11 @@
+node_modules
+.next
+.turbo
+pnpm-lock.yaml
+apps/nextjs/public/vendor
+data
+LICENSE
+apps/nextjs/next-env.d.ts
+.southview
+.data
+.env*

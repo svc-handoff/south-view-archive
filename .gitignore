@@ -1,0 +1,25 @@
+node_modules/
+.next/
+.turbo/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+*.log
+test-results/
+apps/nextjs/public/vendor/maplibre/
+.southview/
+.data/
+.vercel/
+
+.vercel
+.env*
+
+# Keep local credentials and review artifacts out of Git.
+.env*
+!.env.example
+docs/screenshots/
+*.pem
+*.key
+*.p12
+*.pfx

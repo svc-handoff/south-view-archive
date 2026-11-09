@@ -1,0 +1,392 @@
+.photo-viewer {
+  margin: 28px 0;
+  min-width: 0;
+}
+.photo-viewer-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+.photo-viewer-portrait .photo-viewer-thumbnails {
+  grid-template-columns: minmax(0, 420px);
+}
+.photo-viewer-figure {
+  min-width: 0;
+  scroll-margin-top: 24px;
+}
+.photo-viewer-trigger {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-height: 180px;
+  padding: 0;
+  border: 1px solid var(--line, #ded9cd);
+  background: var(--sand, #eae4d7);
+  text-align: left;
+  overflow: hidden;
+  border-radius: 3px;
+  cursor: zoom-in;
+}
+.photo-viewer-trigger img {
+  display: block;
+  width: 100%;
+  height: 260px;
+  object-fit: contain;
+}
+.photo-viewer-portrait .photo-viewer-trigger img {
+  height: auto;
+  max-height: 470px;
+}
+.photo-enlarge-label {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  background: rgba(255, 252, 246, 0.96);
+  color: var(--ink, #302d28);
+  border: 1px solid var(--line, #ded9cd);
+  border-radius: 3px;
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.photo-viewer-trigger:hover .photo-enlarge-label,
+.photo-viewer-trigger:focus-visible .photo-enlarge-label {
+  background: var(--wine, #743444);
+  color: #fff;
+}
+.photo-viewer-trigger:focus-visible {
+  outline: 3px solid var(--wine, #743444);
+  outline-offset: 4px;
+}
+.photo-viewer-figure figcaption {
+  padding: 15px 0 0;
+}
+.photo-attribution {
+  color: var(--ink, #302d28);
+  overflow-wrap: anywhere;
+}
+.photo-caption {
+  display: block;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.photo-attribution dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+.photo-attribution dl > div {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr);
+  column-gap: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.photo-attribution dt {
+  color: var(--muted, #726e64);
+  font-weight: 600;
+}
+.photo-attribution dd {
+  margin: 0;
+}
+.photo-attribution-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 17px;
+  row-gap: 4px;
+  margin-top: 8px;
+}
+.photo-attribution-links a,
+.photo-image-unavailable a {
+  min-height: 44px;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--wine, #743444);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.photo-viewer-dialog {
+  padding: 0;
+  width: min(1220px, calc(100vw - 40px));
+  max-width: none;
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  border: 1px solid #e1daca;
+  border-radius: 5px;
+  box-shadow: 0 25px 100px #0005;
+  background: var(--surface, #fffcf6);
+  color: var(--ink, #302d28);
+  overflow: hidden;
+}
+.photo-viewer-dialog[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.photo-viewer-dialog::backdrop {
+  background: rgba(25, 23, 21, 0.78);
+}
+.photo-dialog-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line, #ded9cd);
+  background: var(--surface, #fffcf6);
+}
+.photo-dialog-count {
+  font-size: 14px;
+  color: var(--muted, #726e64);
+  line-height: 1.5;
+}
+.photo-dialog-actions {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.photo-dialog-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 8px;
+  color: var(--ink, #302d28);
+  font-size: 14px;
+}
+.photo-dialog-actions button:hover:not(:disabled) {
+  background: var(--wine-light, #f2e5e4);
+  border-color: var(--line, #ded9cd);
+}
+.photo-dialog-actions button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.photo-dialog-actions button:focus-visible,
+.photo-attribution-links a:focus-visible,
+.photo-image-unavailable a:focus-visible {
+  outline: 3px solid var(--wine, #743444);
+  outline-offset: 2px;
+}
+.photo-dialog-close {
+  margin-left: 10px;
+}
+.photo-dialog-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(255px, 320px);
+  min-height: 0;
+  overflow: auto;
+}
+.photo-dialog-image {
+  background: #e8e2d5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 240px;
+  touch-action: pan-y pinch-zoom;
+}
+.photo-dialog-image > img {
+  display: block;
+  width: 100%;
+  height: min(76dvh, 790px);
+  object-fit: contain;
+}
+.photo-dialog-details {
+  padding: 28px 24px;
+  min-width: 0;
+  max-height: 78dvh;
+  overflow: auto;
+}
+.photo-dialog-details .photo-attribution h2 {
+  font-size: 26px;
+  line-height: 1.25;
+  margin: 0 0 23px;
+  letter-spacing: -0.015em;
+}
+.photo-dialog-details .photo-attribution dl {
+  gap: 20px;
+}
+.photo-dialog-details .photo-attribution dl > div {
+  grid-template-columns: 1fr;
+  gap: 3px;
+  font-size: 15px;
+}
+.photo-dialog-details .photo-attribution dt {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+.photo-dialog-details .photo-attribution-links {
+  display: grid;
+  gap: 3px;
+  margin-top: 24px;
+}
+.photo-dialog-help {
+  border-top: 1px solid var(--line, #ded9cd);
+  margin-top: 26px;
+  padding-top: 17px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted, #726e64);
+}
+.photo-image-unavailable {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 35px 24px;
+  text-align: center;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--muted, #726e64);
+}
+.photo-image-unavailable small {
+  font-size: 13px;
+}
+.photo-image-unavailable p {
+  max-width: 330px;
+}
+.photo-viewer-notice {
+  font-size: 15px;
+  padding: 15px;
+  border: 1px solid var(--line, #ded9cd);
+  background: var(--paper, #f7f4ed);
+  margin-bottom: 20px;
+}
+.photo-linked-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 20px;
+  row-gap: 8px;
+  font-size: 14px;
+  color: var(--muted, #726e64);
+  margin: 18px 0;
+}
+.photo-linked-metadata > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+}
+.photo-linked-metadata strong {
+  font-weight: 600;
+  color: var(--ink, #302d28);
+}
+.photo-linked-metadata a {
+  color: var(--wine, #743444);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  /* Inline-block keeps the link on the row's baseline; the padding keeps a 30px tap target. */
+  display: inline-block;
+  padding: 7px 0;
+  margin: -7px 0;
+}
+.photo-date-context {
+  font-size: 13px;
+  color: var(--muted, #726e64);
+  margin-top: 6px;
+}
+.photo-related-entry {
+  border-top: 1px solid var(--line, #ded9cd);
+  padding-top: 20px;
+  margin-top: 22px;
+}
+.photo-related-entry h3 {
+  margin: 9px 0 14px;
+  font-size: 25px;
+}
+@media (max-width: 760px) {
+  .photo-viewer-thumbnails {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .photo-viewer-dialog {
+    width: calc(100vw - 16px);
+    max-height: calc(100dvh - 16px);
+  }
+  .photo-dialog-toolbar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .photo-dialog-actions {
+    gap: 0;
+  }
+  .photo-dialog-close {
+    margin-left: 3px;
+  }
+  .photo-dialog-close span {
+    display: none;
+  }
+  .photo-dialog-content {
+    display: block;
+    overflow: auto;
+  }
+  .photo-dialog-image {
+    min-height: 120px;
+  }
+  .photo-dialog-image > img {
+    height: auto;
+    max-height: 45dvh;
+    min-height: 160px;
+  }
+  .photo-dialog-details {
+    max-height: none;
+    overflow: visible;
+    padding: 22px 20px;
+  }
+  .photo-dialog-details .photo-attribution h2 {
+    font-size: 24px;
+    margin-bottom: 18px;
+  }
+  .photo-dialog-details .photo-attribution dl {
+    gap: 11px;
+  }
+  .photo-dialog-details .photo-attribution dl > div {
+    grid-template-columns: 65px minmax(0, 1fr);
+    gap: 9px;
+    font-size: 14px;
+  }
+  .photo-dialog-details .photo-attribution dt {
+    font-size: 12px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .photo-dialog-help {
+    margin-top: 15px;
+    padding-top: 12px;
+  }
+  .photo-dialog-details .photo-attribution-links {
+    margin-top: 12px;
+  }
+  .photo-dialog-count {
+    font-size: 12px;
+  }
+  .photo-enlarge-label {
+    font-size: 11px;
+  }
+  .photo-viewer-trigger img {
+    height: 245px;
+  }
+  .photo-viewer-portrait .photo-viewer-trigger img {
+    max-height: 440px;
+  }
+  .photo-linked-metadata {
+    display: grid;
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "@southview/services",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/auth.ts",
+    "./storage": "./src/storage.ts",
+    "./photos": "./src/photos.ts",
+    "./upload-ticket": "./src/upload-ticket.ts",
+    "./config": "./src/config.ts",
+    "./vet": "./src/vet.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "grant-reviewer": "tsx script/grant-reviewer.ts",
+    "check-storage": "tsx script/check-storage.ts",
+    "list-blob": "tsx script/list-blob.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1146.0",
+    "@aws-sdk/s3-request-presigner": "3.1146.0",
+    "@better-auth/drizzle-adapter": "1.7.7",
+    "@southview/db": "workspace:*",
+    "@southview/validators": "workspace:*",
+    "@vercel/blob": "2.8.2",
+    "better-auth": "1.7.7",
+    "drizzle-orm": "0.45.3",
+    "openai": "7.38.0",
+    "sharp": "0.35.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

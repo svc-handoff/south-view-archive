@@ -1,0 +1,35 @@
+{
+  "name": "@southview/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./fixtures": "./src/fixtures.ts",
+    "./seed": "./src/seed.ts",
+    "./connection": "./src/connection.ts",
+    "./community": "./src/community.ts",
+    "./staff-edits": "./src/staff-edits.ts",
+    "./vet": "./src/vet.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx script/migrate.ts",
+    "seed": "tsx script/seed.ts",
+    "db:migrate": "tsx script/migrate.ts",
+    "places:backfill": "tsx script/backfill-places.ts",
+    "persons:restore": "tsx script/restore-persons.ts",
+    "db:seed": "tsx script/seed.ts"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@southview/validators": "workspace:*",
+    "drizzle-orm": "0.45.3",
+    "postgres": "3.4.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3"
+  }
+}

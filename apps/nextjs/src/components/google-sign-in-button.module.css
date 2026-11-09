@@ -1,0 +1,65 @@
+/* Artwork: Google's pre-approved light rectangular Sign in with Google button.
+ * https://developers.google.com/identity/branding-guidelines
+ * Native button semantics and the archive's focus ring remain available.
+ */
+.button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 216px;
+  height: 48px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 4.8px;
+  background: white;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: box-shadow 0.218s;
+}
+.button img {
+  display: block;
+  width: 216px;
+  height: 48px;
+}
+.button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: #303030;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.218s;
+}
+.button:not(:disabled):hover {
+  box-shadow:
+    0 1px 2px rgb(60 64 67 / 30%),
+    0 1px 3px 1px rgb(60 64 67 / 15%);
+}
+.button:not(:disabled):hover::after {
+  opacity: 0.08;
+}
+.button:not(:disabled):active::after,
+.button:not(:disabled):focus-visible::after {
+  opacity: 0.12;
+}
+.button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .button::after {
+    transition: none;
+  }
+}

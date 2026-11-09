@@ -1,0 +1,186 @@
+[
+  {
+    "id": "house-lewis-biography",
+    "title": "LEWIS, John R.",
+    "creator": "Office of the Historian",
+    "publisher": "U.S. House of Representatives",
+    "url": "https://history.house.gov/People/Detail/16948",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Supports offices held, life dates, and interment at South-View. No grave coordinates."
+  },
+  {
+    "id": "house-lewis-oral-history",
+    "title": "The Honorable John R. Lewis — Oral History",
+    "creator": "Matt Wasniewski and Jackie Burns; interview with John R. Lewis",
+    "publisher": "Office of the Historian, U.S. House of Representatives",
+    "url": "https://history.house.gov/OralHistory/Detail?id=25769814267",
+    "accessedAt": "2026-10-03",
+    "date": "2014-12-11",
+    "kind": "oral-history",
+    "catalogueId": "25769814267",
+    "note": "Original archive with audio excerpts, transcript, and linked deed of gift. This demo links out and does not copy the recording."
+  },
+  {
+    "id": "house-lewis-transcript",
+    "title": "The Honorable John R. Lewis Oral History Interview — Final Edited Transcript",
+    "creator": "Office of the Historian",
+    "publisher": "U.S. House of Representatives",
+    "url": "https://history.house.gov/Oral-History/People/OHPeople-Transcripts/lewis-transcript/",
+    "accessedAt": "2026-10-03",
+    "date": "2014-12-11",
+    "kind": "document",
+    "note": "PDF page ii gives the archive’s preferred citation; interview begins on printed page 1."
+  },
+  {
+    "id": "stanford-king-sr",
+    "title": "King, Martin Luther, Sr.",
+    "creator": "The Martin Luther King, Jr. Research and Education Institute",
+    "publisher": "Stanford University",
+    "url": "https://kinginstitute.stanford.edu/king-martin-luther-sr",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Lists birth as 19 December 1897, conflicting with the Smithsonian authority metadata and prior demo. Birth year is withheld in this collection."
+  },
+  {
+    "id": "smithsonian-king-sr-metadata",
+    "title": "Lonnie C. King Oral History Interview",
+    "creator": "Civil Rights History Project",
+    "publisher": "National Museum of African American History and Culture, Smithsonian Institution",
+    "url": "https://nmaahc.si.edu/object/nmaahc_2011.174.90.1a-k",
+    "accessedAt": "2026-10-03",
+    "date": "2013-05-29",
+    "kind": "oral-history",
+    "catalogueId": "2011.174.90.1a-k",
+    "note": "Subject metadata lists Martin Luther King Sr. as 1899–1984. The narrator is Lonnie C. King, NOT Martin Luther King Sr.; used here only to document a date conflict."
+  },
+  {
+    "id": "dlg-king-sr-oral-history",
+    "title": "Martin Luther King Sr., June 28, 1973",
+    "creator": "David Roberts; interview with Martin Luther King Sr.",
+    "publisher": "Atlanta University Center Robert W. Woodruff Library / Digital Library of Georgia",
+    "url": "https://dlg.usg.edu/record/auu_drohc_auc-053-0002",
+    "accessedAt": "2026-10-03",
+    "date": "1973-06-28",
+    "kind": "oral-history",
+    "catalogueId": "auc.053:0002",
+    "note": "David Roberts Oral History Collection. Catalogue specifies sound, audio/mpeg. Original partner player did not load during review; only the catalogue description is summarized."
+  },
+  {
+    "id": "explore-georgia-south-view",
+    "title": "South-View Cemetery",
+    "creator": "Explore Georgia",
+    "publisher": "Georgia Department of Economic Development",
+    "url": "https://exploregeorgia.org/atlanta/history-heritage/african-american/south-view-cemetery",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Documents the shared crypt of Martin Luther King Sr. and Alberta Williams King. Does not supply its coordinates."
+  },
+  {
+    "id": "nps-herndon-nomination",
+    "title": "Herndon Home — National Historic Landmark Nomination",
+    "creator": "National Historic Landmark documentation",
+    "publisher": "National Park Service, U.S. Department of the Interior",
+    "url": "https://npgallery.nps.gov/GetAsset/NHLS/00000261_text",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "catalogueId": "NRIS 00000261",
+    "note": "Burial: printed page 18 (PDF page 18). Insurance history: pages 19–20. This fixture does not derive grave coordinates from the report."
+  },
+  {
+    "id": "herndon-home-museum",
+    "title": "The Herndon Home Museum",
+    "creator": "The Herndon Foundation",
+    "publisher": "Herndon Home Museum",
+    "url": "https://www.herndon.foundation/",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Supports the family home, enterprise overview, and address at 587 University Place NW. Text is paraphrased, not reproduced."
+  },
+  {
+    "id": "grave-navigation-data",
+    "title": "South-View Grave Navigation — public graves dataset",
+    "creator": "South-View Grave Navigation project contributors",
+    "publisher": "GitHub / southviewgravenavigation-coder",
+    "url": "https://github.com/southviewgravenavigation-coder/South-View-Grave-Navigation/blob/1deeef3240cad195c61959dbb52a7c583e84d9f3/data/graves.json",
+    "accessedAt": "2026-10-03",
+    "kind": "dataset",
+    "note": "Public demo subset, records 2, 7, and 14. Coordinates have not been independently verified. The separate coordinates.json is inconsistent and is not used. Repository has no explicit license."
+  },
+  {
+    "id": "svcmap-seed",
+    "title": "SVCMAP — seed entities",
+    "creator": "SVCMAP project contributors",
+    "publisher": "GitHub / taologan",
+    "url": "https://github.com/taologan/SVCMAP/blob/82c3bb14c7d01311dbe93201dd8549db0824c522/scripts/seed-entities.mjs",
+    "accessedAt": "2026-10-03",
+    "kind": "dataset",
+    "note": "Reference for project crosswalk only. Explicit MOCK_ENTITIES are not treated as verified biographies or grave positions. No code or biography is copied from this file."
+  },
+  {
+    "id": "commons-john-lewis-portrait",
+    "title": "File:Johnlewis.jpg — official congressional portrait",
+    "creator": "Online Guide to House Members and Senators / U.S. Congress",
+    "publisher": "Wikimedia Commons",
+    "url": "https://commons.wikimedia.org/wiki/File:Johnlewis.jpg",
+    "accessedAt": "2026-10-03",
+    "date": "2011-07-07",
+    "kind": "image",
+    "rights": "Public domain in the United States; PD-US-Congress designation on the file page.",
+    "note": "Original 675 × 825 JPEG, unchanged. SHA-1 ee850b66757798198376832126b3f4f7c6d0be88. Local file: /images/john-lewis.jpg."
+  },
+  {
+    "id": "osm-herndon-home",
+    "title": "OpenStreetMap node 367915546 — Herndon Home Museum",
+    "creator": "OpenStreetMap contributors",
+    "publisher": "OpenStreetMap",
+    "url": "https://www.openstreetmap.org/node/367915546",
+    "accessedAt": "2026-10-03",
+    "kind": "dataset",
+    "catalogueId": "node/367915546, version 7",
+    "rights": "© OpenStreetMap contributors, Open Database License (ODbL) 1.0.",
+    "note": "Read from https://api.openstreetmap.org/api/0.6/node/367915546.json. Address-level point; no entrance precision claimed."
+  },
+  {
+    "id": "osm-atlanta-city-hall",
+    "title": "OpenStreetMap way 113041909 — Atlanta City Hall",
+    "creator": "OpenStreetMap contributors",
+    "publisher": "OpenStreetMap",
+    "url": "https://www.openstreetmap.org/way/113041909",
+    "accessedAt": "2026-10-03",
+    "kind": "dataset",
+    "catalogueId": "way/113041909, version 10",
+    "rights": "© OpenStreetMap contributors, Open Database License (ODbL) 1.0.",
+    "note": "Read full node geometry from https://api.openstreetmap.org/api/0.6/way/113041909/full.json. Marker is its bounding-box midpoint, not an entrance."
+  },
+  {
+    "id": "atlanta-government",
+    "title": "Government — City of Atlanta",
+    "creator": "City of Atlanta",
+    "publisher": "City of Atlanta",
+    "url": "https://www.atlantaga.gov/government",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Confirms the current City Hall address at 55 Trinity Avenue SW. Does not identify Lewis’s historical office."
+  },
+  {
+    "id": "nps-ebenezer-place",
+    "title": "Ebenezer — Heritage Sanctuary",
+    "creator": "Martin Luther King, Jr. National Historical Park",
+    "publisher": "National Park Service",
+    "url": "https://www.nps.gov/places/ebenezer-heritage-sanctuary.htm",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Confirms historic church identity, street address, and the father-and-son co-pastorate."
+  },
+  {
+    "id": "nps-ebenezer-event",
+    "title": "Church Talk — Historic Ebenezer Baptist Church",
+    "creator": "Martin Luther King, Jr. National Historical Park",
+    "publisher": "National Park Service",
+    "url": "https://www.nps.gov/planyourvisit/event-details.htm?id=A5A53CC9-FB02-2589-A1D666D80B1F99E3",
+    "accessedAt": "2026-10-03",
+    "kind": "document",
+    "note": "Location section publishes 33.755268, -84.374046. Used as a visitor-location reference, not an entrance survey or a promise of current tour availability."
+  }
+]

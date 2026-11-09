@@ -1,0 +1,985 @@
+/* Map-first layout. Scope everything so archive and contribution pages are unchanged. */
+.explorer.map-explorer {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  overflow: hidden;
+  background: #e9e8e0;
+}
+.map-explorer #main-content,
+.explorer.map-explorer .atlas,
+.explorer.map-explorer .atlas-body,
+.explorer.map-explorer .map-column {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+.map-explorer #main-content {
+  outline: none;
+}
+.map-no-script {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  padding: 96px 32px 32px;
+  overflow: auto;
+  background: #fffcf9;
+}
+.map-explorer .people-sidebar {
+  position: absolute;
+  top: 80px;
+  left: 16px;
+  bottom: auto;
+  width: var(--sidebar-width, 360px);
+  max-width: calc(100% - 32px);
+  height: auto;
+  max-height: calc(100% - 128px);
+  border: 1px solid #ded9cd;
+  border-radius: 12px;
+  box-shadow: 0 3px 14px #302d2824;
+  background: #fffcf9;
+  overflow: hidden;
+  z-index: 12;
+}
+.map-explorer .search-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.map-explorer .search-box {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 4px;
+  gap: 10px;
+  height: 44px;
+  min-height: 44px;
+}
+.map-explorer .search-box input {
+  font-size: 16px;
+  height: 44px;
+  min-width: 0;
+}
+.map-explorer .search-box:focus-within {
+  box-shadow: inset 0 -2px var(--wine);
+}
+.browse-people-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  padding: 6px 8px;
+  color: var(--wine);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+.browse-people-toggle > svg {
+  width: 18px;
+  height: 18px;
+}
+.people-count {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  border-radius: 11px;
+  background: #eee4e2;
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.browse-people-toggle:hover,
+.browse-people-toggle[aria-expanded='true'] {
+  background: #f0eae0;
+}
+.browse-results {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+}
+.browse-filters {
+  padding: 8px 14px 0;
+}
+.map-explorer .filter-row {
+  margin: 0;
+  gap: 8px;
+}
+.map-explorer .theme-filter {
+  flex: 1;
+}
+.map-explorer .theme-filter select {
+  font-size: 14px;
+  min-height: 44px;
+}
+.map-explorer .sort-button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.map-explorer .map-stories-link {
+  font-size: 13px;
+  min-height: 36px;
+  margin: 0;
+}
+.map-explorer .collection-heading {
+  padding: 10px 16px;
+}
+.map-explorer .collection-heading h2 {
+  font-size: 12px;
+}
+.map-explorer .people-results {
+  min-height: 0;
+  overscroll-behavior: contain;
+}
+.map-explorer .person-card {
+  padding: 13px 16px;
+}
+.map-explorer .person-card h3 {
+  font-size: 20px;
+}
+.map-explorer .person-card .person-image,
+.map-explorer .person-card .person-monogram {
+  width: 42px;
+  height: 48px;
+}
+.map-explorer .person-card .person-monogram > span {
+  font-size: 18px;
+}
+.map-explorer .person-card .person-monogram > svg,
+.map-explorer .person-number {
+  display: none;
+}
+.map-explorer .person-years {
+  font-size: 12px;
+}
+.map-explorer .card-summary {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+.map-explorer .card-meta {
+  margin-top: 7px;
+}
+.map-explorer .detail-panel {
+  top: 80px;
+  bottom: 16px; /* one baseline with the legend and the control stack */
+  right: 16px;
+  width: var(--detail-width, 360px);
+  border: 1px solid #d4cbbd;
+  border-radius: 12px;
+  box-shadow: 0 3px 18px #302d2828;
+  overflow: hidden;
+  z-index: 15;
+}
+.map-explorer .detail-top {
+  padding: 4px 8px 4px 20px;
+  min-height: 48px;
+  flex-shrink: 0;
+}
+.map-explorer .detail-top button {
+  width: 44px;
+  height: 44px;
+}
+.map-explorer .detail-scroll {
+  min-height: 0;
+  padding: 20px 20px 0;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.map-explorer .detail-person {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+.map-explorer .detail-person .large {
+  float: none;
+  width: 52px;
+  height: 64px;
+  margin: 0;
+}
+.map-explorer .detail-person .person-monogram.large > span {
+  font-size: 24px;
+  line-height: 1;
+}
+.map-explorer .detail-person .person-monogram.large > svg {
+  width: 23px;
+  height: 23px;
+}
+.detail-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.map-explorer .detail-person .theme-label {
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.6px;
+}
+.map-explorer .detail-person h2 {
+  font-size: 28px;
+  line-height: 1.15;
+  margin: 0;
+  letter-spacing: -0.5px;
+  overflow-wrap: anywhere;
+}
+.map-explorer .detail-person .person-years {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+.map-explorer .detail-person::after {
+  display: none;
+}
+.map-explorer .portrait-credit {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted, #6b6459);
+}
+.map-explorer .portrait-credit a {
+  color: inherit;
+  text-decoration: underline;
+}
+/* At the end of the person panel, after their places, like image credits on the full page. */
+.map-explorer .connected-places + .portrait-credit {
+  margin-top: 18px;
+  /* Room below too: it is the last thing before the panel's bottom bar. */
+  padding: 14px 0 20px;
+  border-top: 1px solid var(--line, #ded9cd);
+}
+/* Directions: a small chip, top-right of each place card and under a place's location note. */
+.map-explorer .directions-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid #d8cdb9;
+  border-radius: 999px;
+  background: #fffcf9;
+  color: var(--wine);
+  font-size: 11.5px;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.map-explorer .directions-chip:hover {
+  border-color: var(--wine);
+}
+.map-explorer .directions-chip:focus-visible {
+  outline: 2px solid var(--wine);
+  outline-offset: 2px;
+}
+.map-explorer .connected-place {
+  position: relative;
+}
+.map-explorer .connected-place > .directions-chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+/* Keep the label clear of the chip. */
+.map-explorer .connected-place.has-directions > .eyebrow {
+  display: block;
+  padding-right: 96px;
+  min-height: 18px;
+}
+.map-explorer .detail-place .directions-chip {
+  margin-top: 10px;
+}
+.map-explorer .detail-summary {
+  font-size: 18px;
+  margin-top: 20px;
+}
+.map-explorer .detail-citation-links {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 20px;
+}
+.map-explorer .detail-citation-links > a {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 16px;
+  align-items: start;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 0;
+  font-size: 12px;
+  line-height: 1.6;
+  text-decoration: none;
+}
+.map-explorer .detail-citation-links > a > span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.map-explorer .detail-citation-links > a > svg {
+  margin-top: 2px;
+}
+.map-explorer .material-mini {
+  align-items: start;
+}
+.map-explorer .material-mini > svg {
+  margin-top: 3px;
+}
+.map-explorer .material-mini > span {
+  min-width: 0;
+}
+.map-explorer .detail-bottom {
+  padding: 8px 20px;
+  flex-shrink: 0;
+}
+.map-explorer .contribute-record,
+.map-explorer .full-record-link {
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.map-explorer .contribute-record {
+  margin-bottom: 6px;
+}
+.map-explorer .copy-record {
+  font-size: 12px;
+}
+.map-explorer .hover-preview {
+  position: fixed;
+  bottom: auto;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 112px);
+  transform: none;
+  border-radius: 10px;
+  padding: 15px 18px;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 14;
+}
+.map-explorer .hover-preview h3 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 0 0 6px;
+}
+.map-explorer .preview-place {
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--wine);
+}
+.map-explorer .hover-preview p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin-top: 8px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+.map-explorer .connected-place.is-active > .eyebrow,
+.map-explorer .connected-place.is-active > button {
+  color: var(--wine);
+}
+.map-explorer .connected-place.is-active > button strong {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.map-explorer .map-controls {
+  right: 16px;
+  bottom: 16px;
+  border-radius: 9px;
+}
+.map-explorer.has-selection .map-controls {
+  right: calc(var(--detail-width, 360px) + 32px);
+}
+.map-explorer .map-north {
+  display: none;
+}
+/* Below the zoom buttons: centre on my location, centre on the cemetery. */
+.map-explorer .map-controls button {
+  color: var(--wine);
+}
+.map-explorer .map-controls button:disabled {
+  color: var(--muted);
+}
+.map-explorer .map-spin {
+  animation: map-spin 0.9s linear infinite;
+}
+@keyframes map-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+/* The legend stands as a column in the corner, so a narrow map never clips its tail. */
+.map-explorer .map-caption {
+  left: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+/* Legend control: with a person open, keep only their markers on the map. */
+.map-explorer .map-focus-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 3px 10px;
+  border: 1px solid #c9bfae;
+  border-radius: 15px;
+  background: #fffdf8;
+  color: var(--wine);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-explorer .map-focus-toggle:hover {
+  background: #f3ece0;
+}
+.map-explorer .map-focus-toggle[aria-pressed='true'] {
+  background: var(--wine);
+  border-color: var(--wine);
+  color: #fffcf6;
+}
+.map-explorer .cemetery-key {
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  border: 1px solid #743444;
+  background: #74344430;
+  border-radius: 2px;
+}
+.map-explorer .map-caption a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.map-explorer .maplibregl-ctrl-bottom-right {
+  right: 0;
+  bottom: 0;
+}
+.map-explorer .map-warning {
+  left: 50%;
+  top: 148px;
+  bottom: auto;
+  transform: translateX(-50%);
+  max-width: min(420px, calc(100% - 32px));
+  z-index: 9;
+}
+/* A short passing notice (location refused), sized to its text. */
+.map-explorer .map-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: max-content;
+  padding: 8px 10px 8px 14px;
+  font-size: 13px;
+  border: 1px solid #e3d6b8;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px #302d2826;
+}
+.map-explorer .map-toast button {
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  min-width: 28px;
+  min-height: 28px;
+  color: inherit;
+}
+/* Map data credit: small, plain, pinned to the corner under the panel's baseline. */
+.map-explorer .map-credit {
+  position: absolute;
+  right: 8px;
+  bottom: 2px;
+  z-index: 2;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #7a7265;
+  pointer-events: none;
+}
+.map-explorer .map-credit a {
+  color: inherit;
+  text-decoration: none;
+  pointer-events: auto;
+}
+.map-explorer .map-credit a:hover {
+  text-decoration: underline;
+}
+.map-explorer .map-loading {
+  font-size: 15px;
+}
+.map-explorer .map-error {
+  padding: 140px 32px 80px;
+}
+.map-explorer .map-error h3 {
+  font-size: 26px;
+}
+.map-explorer .map-error p {
+  max-width: 400px;
+  font-size: 16px;
+}
+
+/* MapLibre owns the root transform. The SVG tip and WebGL coordinate are both at (22, 48). */
+.map-explorer .map-marker.maplibregl-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  box-sizing: border-box;
+  width: 44px;
+  height: 48px;
+  min-width: 44px;
+  min-height: 48px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  line-height: 1;
+  overflow: visible;
+}
+.map-explorer .marker-pin {
+  position: absolute;
+  left: 6px;
+  bottom: 0;
+  width: 32px;
+  height: 42px;
+  overflow: visible;
+  filter: drop-shadow(0 2px 3px #302d2840);
+}
+.map-explorer .marker-pin-body {
+  fill: #743444;
+  stroke: #fffaf1;
+  stroke-width: 1.8;
+}
+.map-explorer .marker-pin-core {
+  fill: #fffaf1;
+}
+.map-explorer .map-marker.is-selected .marker-pin-body {
+  fill: #302d28;
+  stroke-width: 2.5;
+}
+.map-explorer .map-marker:hover .marker-pin-body {
+  fill: #4b2530;
+}
+.map-explorer .map-marker.is-atlanta .marker-pin-body {
+  fill: var(--place);
+}
+.map-explorer .map-marker.is-atlanta:hover .marker-pin-body {
+  fill: #35402d;
+}
+.map-explorer .map-marker.is-selected .marker-pin-body {
+  fill: #302d28;
+}
+.map-explorer .legend-pin {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  vertical-align: -1px;
+  background: var(--wine);
+  border-radius: 50%;
+}
+.map-explorer .legend-pin-place {
+  background: var(--place);
+  border-radius: 1px;
+  transform: rotate(45deg) scale(0.85);
+}
+.map-explorer .map-caption > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+/* The exact position of each place: a dot centred on the pin's tip, inside the pin's own element so
+   the pin and its dot stack together (pins set their own order inline). */
+.map-explorer .marker-position-dot {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  box-sizing: border-box;
+  border: 2px solid #fffcf6;
+  border-radius: 50%;
+  background: #722d3c;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.map-explorer .map-marker.is-atlanta .marker-position-dot {
+  background: #4f5a46;
+}
+.map-explorer .map-marker.is-dimmed > .marker-position-dot {
+  opacity: 0.28;
+}
+/* Resting on a marker fades every marker that shares no person with it, so the places of one
+   life stand out from the rest of the map. */
+/* The pin and label fade, not the button: MapLibre writes the button's own opacity inline. */
+.map-explorer .map-marker > .marker-pin,
+.map-explorer .map-marker > .marker-label {
+  transition: opacity 0.18s ease;
+}
+.map-explorer .map-marker.is-dimmed > .marker-pin,
+.map-explorer .map-marker.is-dimmed > .marker-label {
+  opacity: 0.28;
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-explorer .map-marker > .marker-pin,
+  .map-explorer .map-marker > .marker-label {
+    transition: none;
+  }
+}
+.map-explorer .map-marker:focus-visible {
+  outline: 3px solid var(--wine);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.map-explorer .marker-label {
+  top: calc(100% + 9px);
+  max-width: 230px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-radius: 6px;
+  pointer-events: none;
+  font-size: 12px;
+}
+@media (max-width: 1000px) and (min-width: 761px) {
+  .map-explorer .people-sidebar {
+    width: var(--sidebar-width, 330px);
+  }
+  .map-explorer .detail-panel {
+    width: var(--detail-width, 310px);
+  }
+  .map-explorer.has-selection .map-controls {
+    right: calc(var(--detail-width, 310px) + 32px);
+  }
+  .browse-people-toggle {
+    padding: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .map-explorer .people-sidebar {
+    top: 76px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100% - 150px);
+  }
+  .map-explorer .search-controls {
+    padding: 5px 8px;
+  }
+  .browse-people-toggle {
+    font-size: 12px;
+    padding: 6px;
+  }
+  .map-explorer .detail-panel {
+    top: auto;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: var(--detail-height, 58%);
+    max-height: 92%;
+    min-height: 0;
+    border-radius: 16px 16px 0 0;
+    z-index: 16;
+  }
+  .map-explorer .detail-scroll {
+    max-height: none;
+    padding: 16px 18px 0;
+  }
+  .map-explorer .detail-top {
+    padding-left: 18px;
+  }
+  .map-explorer .detail-person h2 {
+    font-size: 25px;
+  }
+  .map-explorer .detail-bottom {
+    padding: 8px 18px calc(8px + env(safe-area-inset-bottom));
+  }
+  .map-explorer .detail-bottom .copy-record {
+    display: none;
+  }
+  .map-explorer .map-controls {
+    right: 12px;
+    bottom: 32px;
+  }
+  .map-explorer.has-selection .map-controls {
+    right: 12px;
+    bottom: calc(var(--detail-height, 58%) + 34px);
+  }
+  /* The compass would float over a panel that has been dragged taller. */
+  .map-explorer.has-selection .map-north {
+    display: none;
+  }
+  .map-explorer .map-caption {
+    left: 12px;
+    bottom: 32px;
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 8px;
+  }
+  /* Above the bottom sheet only the "only this person" control remains; the legend would
+     fight the sheet for the little map that is left. */
+  .map-explorer.has-selection .map-caption {
+    display: flex; /* globals.css hides the legend here; the control above the sheet stays */
+    bottom: calc(var(--detail-height, 58%) + 34px);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    max-width: calc(100% - 80px); /* clear of the control column beside it */
+  }
+  .map-explorer.has-selection .map-credit {
+    bottom: calc(var(--detail-height, 58%) + 2px);
+  }
+  .map-explorer.has-selection .map-caption > span {
+    display: none;
+  }
+  .map-explorer.has-selection .map-caption:not(:has(.map-focus-toggle)) {
+    display: none;
+  }
+  .map-explorer .map-focus-toggle {
+    min-height: 34px;
+    box-shadow: 0 2px 8px #50402318;
+  }
+  .map-explorer.has-selection .maplibregl-ctrl-bottom-right {
+    bottom: 58%;
+  }
+  .map-explorer .maplibregl-ctrl-attrib {
+    font-size: 9px !important;
+  }
+}
+@media (max-width: 360px) {
+  .browse-people-label {
+    display: none;
+  }
+}
+@media (max-height: 540px) and (max-width: 760px) {
+  .map-explorer.results-open .people-sidebar {
+    max-height: calc(100% - 88px);
+  }
+  .map-explorer .collection-heading,
+  .map-explorer .map-stories-link {
+    display: none;
+  }
+  .map-explorer.has-selection .people-sidebar,
+  .map-explorer.has-selection .map-surface {
+    visibility: hidden;
+  }
+  .map-explorer .detail-panel {
+    top: 64px;
+    height: calc(100% - 64px);
+    max-height: calc(100% - 64px);
+    border-radius: 0;
+  }
+}
+@media (max-height: 540px) and (min-width: 761px) {
+  .map-explorer .detail-panel {
+    top: 78px;
+    bottom: 16px;
+  }
+  .map-explorer .detail-bottom .copy-record {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-explorer *,
+  .map-explorer *::before,
+  .map-explorer *::after {
+    scroll-behavior: auto;
+  }
+}
+.map-explorer .detail-edit-hint {
+  margin: 8px 0 4px;
+  font-size: 13px;
+}
+
+/* The panel clips its contents, so the drag edge sits just inside it. */
+.map-explorer .detail-panel .detail-resize {
+  left: 0;
+}
+/* The search panel widens from its right edge, on a desktop only. */
+.map-explorer .people-sidebar .sidebar-resize {
+  left: auto;
+  right: 0;
+}
+.map-explorer .people-sidebar.is-resizing {
+  user-select: none;
+}
+.map-explorer .people-sidebar.is-resizing .sidebar-resize::after {
+  opacity: 1;
+}
+@media (max-width: 760px) {
+  .map-explorer .detail-panel .detail-resize {
+    left: 50%;
+  }
+  .map-explorer .people-sidebar .sidebar-resize {
+    display: none;
+  }
+}
+
+/* A place reached from a person keeps a way back at the top of the panel. */
+.map-explorer .detail-top .detail-back {
+  width: auto;
+  height: 44px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: -4px;
+  padding: 0 8px 0 4px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--wine);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  text-align: left;
+  cursor: pointer;
+}
+.map-explorer .detail-top .detail-back > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.map-explorer .detail-top .detail-back > svg {
+  flex: none;
+}
+.map-explorer .detail-top .detail-back:hover,
+.map-explorer .detail-top .detail-back:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.map-explorer .detail-location-note {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+.map-explorer .detail-location-note .precision-badge {
+  justify-self: start;
+}
+.map-explorer .detail-location-note .quiet-note {
+  margin: 0;
+}
+.map-explorer .place-person-entry {
+  margin-bottom: 10px;
+}
+.map-explorer .place-person-entry.is-origin {
+  margin: 0 -10px 12px;
+  padding: 10px 10px 2px;
+  background: #f7f2e8;
+  border-left: 3px solid var(--wine);
+  border-radius: 0 8px 8px 0;
+}
+.map-explorer .place-person-entry .place-person-origin {
+  margin: 0 0 8px;
+  font-size: 10px;
+}
+.map-explorer .place-person-entry .relation-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5a554b;
+  margin: 0 0 8px 2px;
+}
+.map-explorer .place-person-entry .place-person-row {
+  margin-bottom: 6px;
+}
+
+/* Place-centric panel: the place, then the people connected to it. */
+.map-explorer .detail-place {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.map-explorer .detail-place .theme-label {
+  display: block;
+  margin-bottom: 6px;
+}
+.map-explorer .detail-place h2 {
+  font-size: 28px;
+  line-height: 1.15;
+  margin: 0 0 4px;
+}
+.map-explorer .detail-place .person-years {
+  margin: 0;
+}
+.map-explorer .place-person-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: #faf6ee;
+  border: 1px solid #e3dccd;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.map-explorer .place-person-row:hover,
+.map-explorer .place-person-row:focus-visible {
+  border-color: var(--wine);
+  background: #fbf2ec;
+}
+.map-explorer .place-person-row > span {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.map-explorer .place-person-row strong {
+  font:
+    18px/1.2 Georgia,
+    serif;
+  font-weight: 400;
+}
+.map-explorer .place-person-row small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.map-explorer .place-person-row .person-image,
+.map-explorer .place-person-row .person-monogram {
+  width: 44px;
+  height: 54px;
+  flex: none;
+}
+.map-explorer .place-person-row svg:last-child {
+  flex: none;
+  color: var(--wine);
+}
+.map-explorer .connected-place .relation-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #5a554b;
+  margin: 6px 0 0;
+}

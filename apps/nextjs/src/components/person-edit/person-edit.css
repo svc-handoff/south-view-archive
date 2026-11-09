@@ -1,0 +1,266 @@
+/* In-page editing on person pages. Shares form primitives with community.css. */
+.person-edit-entry {
+  background: none;
+  border: 0;
+  padding: 0 4px;
+  color: var(--wine);
+  cursor: pointer;
+}
+.person-edit-toolbar {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1268px;
+  margin: 0 auto;
+  padding: 10px 64px;
+  background: var(--wine-light);
+  border-bottom: 1px solid #d9bfc1;
+  color: var(--ink);
+}
+.person-edit-toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--wine);
+}
+.person-edit-toolbar-status span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.person-edit-toolbar-status strong {
+  font-size: 15px;
+}
+.person-edit-toolbar-status small {
+  font-size: 13px;
+  color: var(--muted);
+}
+.person-edit-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.person-edit-toolbar-actions .community-primary,
+.person-edit-toolbar-actions .community-secondary {
+  min-height: 42px;
+  padding: 8px 14px;
+  font-size: 14px;
+}
+.person-edit-exit {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--control-border);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--wine);
+}
+.person-edit-slot {
+  margin: 14px 0 22px;
+}
+.person-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.person-edit-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px dashed var(--wine);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--wine);
+  font-size: 14px;
+}
+.person-edit-add:hover,
+.person-edit-add:focus-visible {
+  background: var(--wine-light);
+}
+.person-edit-form {
+  display: grid;
+  gap: 18px;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--wine);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.person-edit-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.person-edit-form-head strong {
+  font:
+    22px Georgia,
+    serif;
+}
+.person-edit-form .community-field textarea {
+  min-height: 120px;
+}
+.person-edit-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--control-border);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--wine);
+  cursor: pointer;
+}
+.person-edit-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.person-edit-upload:focus-within {
+  outline: 3px solid var(--wine);
+  outline-offset: 3px;
+}
+.person-edit-photo {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  margin-top: 10px;
+}
+.person-edit-photo img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.person-edit-block {
+  position: relative;
+  padding: 14px 18px 12px 20px;
+  margin: 0 0 12px;
+  border: 1px solid #e3c9a6;
+  border-left: 4px solid #b9812c;
+  background: #fbf3e4;
+}
+.person-edit-block-label {
+  font-size: 12px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #7a4c0b;
+  margin-bottom: 8px;
+}
+.person-edit-block h3 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+.person-edit-block > strong {
+  display: block;
+  margin-bottom: 6px;
+}
+.person-edit-block-body {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+.person-edit-block-context {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.person-edit-block-context span {
+  font-weight: 600;
+}
+.person-edit-block-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+.person-edit-block-photos figure {
+  width: 140px;
+}
+.person-edit-block-photos img {
+  width: 140px;
+  height: 105px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+.person-edit-block-photos figcaption {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.person-edit-block-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+.person-edit-root.is-preview .person-edit-block {
+  border-color: #e3c9a6;
+}
+.person-edit-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #302d2866;
+}
+.person-edit-dialog {
+  width: min(640px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 26px 28px 28px;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px #302d2840;
+}
+.person-edit-dialog h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+.person-edit-dialog > .community-hint {
+  margin-bottom: 18px;
+}
+@media (max-width: 1000px) {
+  .person-edit-toolbar {
+    padding: 10px 24px;
+  }
+}
+@media (max-width: 760px) {
+  .person-edit-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 16px;
+  }
+  .person-edit-toolbar-actions {
+    justify-content: space-between;
+  }
+  .person-edit-toolbar-actions .community-primary,
+  .person-edit-toolbar-actions .community-secondary {
+    flex: 1;
+    justify-content: center;
+  }
+  .person-edit-photo {
+    grid-template-columns: 1fr;
+  }
+  .person-edit-form {
+    padding: 14px;
+  }
+  .person-edit-dialog {
+    padding: 20px 16px;
+  }
+}

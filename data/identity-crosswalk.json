@@ -1,0 +1,44 @@
+[
+  {
+    "project": "South-View Grave Navigation",
+    "externalId": "2",
+    "personId": "john-lewis",
+    "note": "John Robert Lewis; manually matched to the congressional biography."
+  },
+  {
+    "project": "South-View Grave Navigation",
+    "externalId": "7",
+    "personId": "martin-luther-king-sr",
+    "note": "Individual King Sr. record; birth year withheld pending conflict resolution."
+  },
+  {
+    "project": "South-View Grave Navigation",
+    "externalId": "14",
+    "personId": "alonzo-herndon",
+    "note": "Alonzo Franklin Herndon; coordinates taken from graves.json itself."
+  },
+  {
+    "project": "SVCMAP seed",
+    "externalId": "john-lewis",
+    "personId": "john-lewis",
+    "note": "Congressman John Lewis name variant. Seed coordinates and text are not imported."
+  },
+  {
+    "project": "SVCMAP seed",
+    "externalId": "mlk-sr-and-alberta",
+    "personId": null,
+    "note": "Combined couple story. Not merged into King Sr.’s individual identity; Alberta requires her own reviewed person record."
+  },
+  {
+    "project": "SVCMAP seed",
+    "externalId": "john-wesley-dobbs",
+    "personId": null,
+    "note": "John Wesley Dobbs and Family is a group story outside this initial collection; no individual identity merge."
+  },
+  {
+    "project": "SVCMAP seed",
+    "externalId": "adrienne-herndon",
+    "personId": null,
+    "note": "Adrienne is a distinct person. Shared surname does not make this an Alonzo Herndon match."
+  }
+]

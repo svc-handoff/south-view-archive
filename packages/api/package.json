@@ -1,0 +1,21 @@
+{
+  "name": "@southview/api",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@southview/db": "workspace:*",
+    "@southview/validators": "workspace:*",
+    "@trpc/server": "11.19.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "5.9.3"
+  }
+}

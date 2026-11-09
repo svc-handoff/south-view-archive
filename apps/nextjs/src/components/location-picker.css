@@ -1,0 +1,114 @@
+/* Map point picker shared by in-page "Add a place" and the new-person form. */
+.location-picker {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.location-picker-label {
+  font-size: 14px;
+  font-weight: 600;
+}
+.location-picker-search {
+  display: flex;
+  gap: 8px;
+}
+.location-picker-search input {
+  flex: 1;
+  min-width: 0;
+}
+.location-picker-search .community-secondary {
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 6px;
+}
+.location-picker-hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--control-border, #8c806d);
+  background: #fffdf6;
+}
+.location-picker-hits button {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink);
+  cursor: pointer;
+}
+.location-picker-hits li:last-child button {
+  border-bottom: 0;
+}
+.location-picker-hits button:hover,
+.location-picker-hits button:focus-visible {
+  background: #f3ede1;
+}
+.location-picker-hits svg {
+  flex: none;
+  margin-top: 3px;
+  color: var(--wine);
+}
+.location-picker-map {
+  height: 280px;
+  border: 1px solid var(--control-border, #8c806d);
+  background: #ece6d8;
+  cursor: crosshair;
+}
+.location-picker-map .maplibregl-ctrl-attrib {
+  font-size: 9px;
+}
+/* Device position and typed coordinates: one row that wraps on narrow screens. */
+.location-picker-gps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.location-picker-gps > .community-secondary {
+  min-height: 44px;
+  padding: 0 14px;
+  gap: 6px;
+  white-space: nowrap;
+}
+.location-picker-coordinates {
+  display: flex;
+  flex: 1;
+  min-width: min(100%, 260px);
+  gap: 8px;
+}
+.location-picker-coordinates input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+.location-picker-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+.location-picker-status {
+  color: var(--muted);
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .location-picker-map {
+    height: 240px;
+  }
+}
+
+/* Inside a form field, inputs are full width; the search row keeps its button beside the box. */
+.community-field .location-picker-search input {
+  width: auto;
+  flex: 1;
+}
+.community-field .location-picker-tools button,
+.location-picker-tools button {
+  min-height: 36px;
+  padding: 0 2px;
+}
