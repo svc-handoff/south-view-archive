@@ -1108,82 +1108,123 @@ form.admin-link-editor {
   background: var(--wine);
   color: var(--surface);
 }
+/* The open tool stays about as tall as the name beside it: one row, then one line of detail. */
 .burial-locate {
   display: grid;
-  gap: 10px;
-  flex: 1 1 340px;
-  max-width: 460px;
-  padding: 14px 16px;
+  gap: 4px;
+  flex: 0 1 430px;
+  min-width: min(100%, 300px);
+  padding: 5px 6px 6px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--paper, #f7f4ec);
+  background: var(--paper);
+  color: var(--ink);
 }
-.burial-locate-head {
+.burial-locate[data-quality='good'] {
+  background: #ecf0e6;
+  border-color: #b9c7a6;
+}
+.burial-locate[data-quality='fair'] {
+  background: #f6efdc;
+  border-color: #dcc68f;
+}
+.burial-locate[data-quality='poor'] {
+  background: #f6e7e4;
+  border-color: #d9aaa2;
+}
+.burial-locate-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-}
-.burial-locate-head strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.burial-locate-wait,
-.burial-locate-detail,
-.burial-locate-error {
-  margin: 0;
-  font-size: 14px;
-  color: var(--muted);
-}
-.burial-locate-wait {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.burial-locate-error {
-  color: var(--wine);
-}
-.burial-locate-detail {
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-}
-.burial-locate-reading {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 1px solid;
-  font-size: 14px;
-  line-height: 1.45;
-}
-.burial-locate-reading small {
-  display: block;
-  color: var(--muted);
-  font-size: 12.5px;
+  min-height: 40px;
 }
 .burial-locate-accuracy {
   flex: none;
-  font-size: 26px;
+  display: inline-flex;
+  font-size: 21px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  color: var(--wine);
 }
-.burial-locate-reading[data-quality='good'] {
-  background: #ecf0e6;
-  border-color: #b9c7a6;
+.burial-locate[data-quality='good'] .burial-locate-accuracy {
   color: #33461f;
 }
-.burial-locate-reading[data-quality='fair'] {
-  background: #f6efdc;
-  border-color: #dcc68f;
+.burial-locate[data-quality='fair'] .burial-locate-accuracy {
   color: #5e4a12;
 }
-.burial-locate-reading[data-quality='poor'] {
-  background: #f6e7e4;
-  border-color: #d9aaa2;
-  color: #7a2a20;
+.burial-locate-status {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  line-height: 1.35;
 }
-.burial-locate .community-primary {
-  justify-self: start;
+.burial-locate-save {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wine);
+  color: var(--surface);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.burial-locate-save:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.burial-locate-close {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.burial-locate-close:hover {
+  background: rgb(0 0 0 / 0.06);
+  color: var(--ink);
+}
+.burial-locate-detail,
+.burial-locate-warning {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.burial-locate-warning {
+  color: #7a2a20;
+  font-weight: 600;
+}
+.burial-locate-choice {
+  font: inherit;
+  font-size: 13.5px;
+  padding: 4px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.burial-locate-pulse {
+  animation: burial-locate-pulse 1.2s ease-in-out infinite;
+}
+@keyframes burial-locate-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .burial-locate-pulse {
+    animation: none;
+  }
 }

@@ -7,6 +7,7 @@ import {
   type Person,
   type StaffEdit,
 } from '@southview/validators';
+import { cemeteryArea } from '@/lib/cemetery-area';
 import { displayPersonName } from '@/lib/person-name';
 import { useStaffRequest } from './admin-shared';
 
@@ -26,12 +27,11 @@ function distance(a: [number, number], b: [number, number]) {
 
 /** How good a reading is, in words staff can act on while standing at the grave. */
 function quality(accuracy: number) {
-  if (accuracy <= 5) return { level: 'good', text: 'Excellent · saves as a verified position' };
+  if (accuracy <= 5) return { level: 'good', text: 'Excellent · saves as verified' };
   if (accuracy <= VERIFIED_ACCURACY_METRES)
-    return { level: 'good', text: 'Good · saves as a verified position' };
-  if (accuracy <= 25)
-    return { level: 'fair', text: 'Fair · saves as a reference position. Waiting may sharpen it' };
-  return { level: 'poor', text: 'Poor · step into the open or wait a few seconds' };
+    return { level: 'good', text: 'Good · saves as verified' };
+  if (accuracy <= 25) return { level: 'fair', text: 'Fair · saves as reference, wait to sharpen' };
+  return { level: 'poor', text: 'Poor · step into the open or wait' };
 }
 
 const geolocationError = (error: GeolocationPositionError) =>
@@ -147,79 +147,107 @@ export function BurialLocate({
     );
 
   const grade = best ? quality(best.accuracy) : null;
+  const outside = best ? metresOutsideCemetery(best.coordinates) : 0;
+  const warning =
+    moves !== null && moves > FAR_METRES
+      ? `${away(moves)} from this grave’s current pin. Check it is ${displayPersonName(person.name)}’s grave.`
+      : best && outside > best.accuracy + 20
+        ? `About ${away(outside)} outside South-View Cemetery. Stand at the grave before saving.`
+        : '';
   return (
-    <div className="burial-locate" role="group" aria-label="Map this person’s burial from here">
-      <div className="burial-locate-head">
-        <strong>
-          <LocateFixed size={17} aria-hidden="true" /> Map burial here
-        </strong>
-        <button type="button" className="community-text-button" onClick={close}>
-          <X size={16} aria-hidden="true" /> Cancel
+    <div
+      className="burial-locate"
+      role="group"
+      aria-label="Map this person’s burial from here"
+      data-quality={locateError ? 'poor' : (grade?.level ?? 'wait')}
+    >
+      <div className="burial-locate-row" aria-live="polite">
+        <span className="burial-locate-accuracy">
+          {best ? (
+            `±${metres} m`
+          ) : (
+            <LocateFixed size={20} className="burial-locate-pulse" aria-hidden="true" />
+          )}
+        </span>
+        <span className="burial-locate-status">
+          {locateError ? (
+            <>
+              {locateError}{' '}
+              <button type="button" className="community-text-button" onClick={start}>
+                Try again
+              </button>
+            </>
+          ) : grade ? (
+            grade.text
+          ) : (
+            'Finding your position…'
+          )}
+        </span>
+        <button
+          type="button"
+          className="burial-locate-save"
+          disabled={!best || busy}
+          onClick={() => void save()}
+        >
+          {busy && <LoaderCircle size={15} className="community-spinner" aria-hidden="true" />}
+          Save
+        </button>
+        <button
+          type="button"
+          className="burial-locate-close"
+          aria-label="Cancel"
+          title="Cancel"
+          onClick={close}
+        >
+          <X size={17} aria-hidden="true" />
         </button>
       </div>
-      {locateError ? (
-        <p className="burial-locate-error" role="alert">
-          {locateError}{' '}
-          <button type="button" className="community-text-button" onClick={start}>
-            Try again
-          </button>
-        </p>
-      ) : !best ? (
-        <p className="burial-locate-wait" aria-live="polite">
-          <LoaderCircle size={16} className="community-spinner" aria-hidden="true" /> Finding your
-          position… stand at the grave.
-        </p>
-      ) : (
-        <div className="burial-locate-reading" data-quality={grade!.level} aria-live="polite">
-          <span className="burial-locate-accuracy">±{metres} m</span>
-          <span>
-            {grade!.text}
-            {latest && latest !== best && (
-              <small> Latest reading ±{Math.round(latest.accuracy)} m; the sharpest is kept.</small>
-            )}
-          </span>
-        </div>
-      )}
       {best && (
         <p className="burial-locate-detail">
           {best.coordinates[1].toFixed(6)}, {best.coordinates[0].toFixed(6)}
           {moves !== null && ` · moves the pin ${moves} m`}
           {!graves.length && ' · adds this grave to the map'}
-        </p>
-      )}
-      {moves !== null && moves > FAR_METRES && (
-        <p className="burial-locate-error" role="alert">
-          That is {moves >= 1000 ? `${(moves / 1000).toFixed(1)} km` : `${moves} m`} from where the
-          map has this grave now. Check that this is {displayPersonName(person.name)}’s grave before
-          saving.
+          {latest && latest !== best && ` · latest ±${Math.round(latest.accuracy)} m`}
         </p>
       )}
       {graves.length > 1 && (
-        <label className="community-field">
-          <span>Which grave</span>
-          <select value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
-            {graves.map((item) => (
-              <option key={item.place.id} value={item.place.id}>
-                {item.place.name} · {item.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select
+          className="burial-locate-choice"
+          aria-label="Which grave"
+          value={placeId}
+          onChange={(event) => setPlaceId(event.target.value)}
+        >
+          {graves.map((item) => (
+            <option key={item.place.id} value={item.place.id}>
+              {item.place.name} · {item.label}
+            </option>
+          ))}
+        </select>
       )}
-      {error && (
-        <p className="burial-locate-error" role="alert">
-          {error}
+      {(warning || error) && (
+        <p className="burial-locate-warning" role="alert">
+          {error || warning}
         </p>
       )}
-      <button
-        type="button"
-        className="community-primary"
-        disabled={!best || busy}
-        onClick={() => void save()}
-      >
-        {busy && <LoaderCircle size={16} className="community-spinner" aria-hidden="true" />}
-        {best ? `Save burial position (±${metres} m)` : 'Waiting for a reading'}
-      </button>
     </div>
   );
+}
+
+const away = (metres: number) =>
+  metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${Math.round(metres)} m`;
+
+/** 0 inside the cemetery outline; outside it, roughly how far to its nearest corner, in metres. */
+export function metresOutsideCemetery(point: [number, number]) {
+  const ring = cemeteryArea.geometry.coordinates[0] as [number, number][];
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]!;
+    const [xj, yj] = ring[j]!;
+    if (
+      yi > point[1] !== yj > point[1] &&
+      point[0] < ((xj - xi) * (point[1] - yi)) / (yj - yi) + xi
+    )
+      inside = !inside;
+  }
+  return inside ? 0 : Math.min(...ring.map((corner) => distance(corner, point)));
 }
