@@ -327,6 +327,20 @@ export const staffPlaceEditSchema = z.object({
   reason: staffReasonSchema,
 });
 export type StaffPlaceEdit = z.infer<typeof staffPlaceEditSchema>;
+/**
+ * A grave position measured on site with a device's location: where the reading put the grave,
+ * and how far off it may be. `placeId` picks the grave when a person has several cemetery places.
+ */
+export const staffBurialMapSchema = z.object({
+  coordinates: z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]),
+  /** The reading's accuracy radius in metres, as the device reported it. */
+  accuracy: z.number().positive().max(1000),
+  placeId: z.string().min(1).max(120).optional(),
+  reason: staffReasonSchema,
+});
+export type StaffBurialMap = z.infer<typeof staffBurialMapSchema>;
+/** At or under this accuracy (metres) a measured grave position is recorded as verified. */
+export const VERIFIED_ACCURACY_METRES = 10;
 /** Corrections to how one person is connected to one place. */
 export const staffLinkEditSchema = z.object({
   patch: z.object({

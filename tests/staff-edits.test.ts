@@ -19,6 +19,7 @@ import {
   editPlace,
   listDeleted,
   listStaffEdits,
+  mapBurial,
   removeIssue,
   removeLink,
   removeMaterial,
@@ -228,6 +229,103 @@ test('staff edits and contributions undo independently', async (t) => {
         after.relations.find((item) => item.id === link.id),
         link,
       );
+    });
+
+    await t.test(
+      'a reviewer maps a burial from the grave, with or without a grave place',
+      async () => {
+        const before = await getArchive();
+        const grave = before.places.find((item) => item.id === 'herndon-south-view')!;
+        await assert.rejects(
+          mapBurial(
+            'alonzo-herndon',
+            { coordinates: [-84.3965, 33.7067], accuracy: 4, reason: 'On site' },
+            guest,
+          ),
+          { code: 'FORBIDDEN' },
+        );
+        // A sharp reading moves the person's one cemetery place and is recorded as verified.
+        const sharp = await mapBurial(
+          'alonzo-herndon',
+          {
+            coordinates: [-84.39654321, 33.70671234],
+            accuracy: 3.6,
+            reason: 'Measured at the grave',
+          },
+          reviewer,
+        );
+        assert.equal(sharp.place.id, grave.id);
+        assert.deepEqual(sharp.place.coordinates, [-84.396543, 33.706712]);
+        assert.equal(sharp.place.precision, 'verified');
+        assert.match(sharp.place.locationNote, /accurate to about 4 m/);
+        assert.deepEqual(sharp.place.coordinateCitations, grave.coordinateCitations);
+        // The person's own history shows it, so it can be undone from their record.
+        assert.ok(
+          (await listStaffEdits({ personId: 'alonzo-herndon' }, reviewer)).some(
+            (edit) => edit.targetTable === 'places' && edit.targetId === grave.id,
+          ),
+        );
+        // A coarse reading is kept, but only as a reference position.
+        const coarse = await mapBurial(
+          'alonzo-herndon',
+          { coordinates: [-84.3965, 33.7067], accuracy: 18, reason: 'Measured at the grave' },
+          reviewer,
+        );
+        assert.equal(coarse.place.precision, 'reference');
+        await undoStaffEdit(coarse.edits[0]!.id, 'Back', reviewer);
+        await undoStaffEdit(sharp.edits[0]!.id, 'Back', reviewer);
+        assert.deepEqual(
+          (await getArchive()).places.find((item) => item.id === grave.id),
+          grave,
+        );
+
+        // Without a cemetery place, the reading adds the grave and connects the person to it.
+        const removed = await removeLink('herndon-burial', 'Testing', reviewer);
+        const added = await mapBurial(
+          'alonzo-herndon',
+          { coordinates: [-84.3965, 33.7067], accuracy: 5, reason: 'Measured at the grave' },
+          reviewer,
+        );
+        assert.equal(added.edits.length, 2);
+        const archive = await getArchive();
+        const newPlace = archive.places.find((item) => item.id === added.place.id)!;
+        assert.equal(newPlace.scope, 'cemetery');
+        assert.ok(newPlace.coordinateCitations.length);
+        assert.ok(
+          archive.relations.some(
+            (item) =>
+              item.personId === 'alonzo-herndon' &&
+              item.placeId === newPlace.id &&
+              item.label === 'Buried here',
+          ),
+        );
+        // One undo takes away both the place and the connection.
+        await undoStaffEdit(added.edits[0]!.id, 'Back', reviewer);
+        assert.ok(!(await getArchive()).places.some((item) => item.id === newPlace.id));
+        await undoStaffEdit(removed.edits[0]!.id, 'Back', reviewer);
+        assert.deepEqual((await getArchive()).relations, before.relations);
+      },
+    );
+
+    await t.test('mapping a place that had no position cites its connections', async () => {
+      const before = await getArchive();
+      const cleared = await editPlace(
+        'herndon-home',
+        { patch: { coordinates: null, precision: 'unmapped' }, reason: 'Unknown for now' },
+        reviewer,
+      );
+      assert.deepEqual(cleared.place.coordinateCitations, []);
+      const mapped = await editPlace(
+        'herndon-home',
+        { patch: { coordinates: [-84.38, 33.75], precision: 'address' }, reason: 'Found it' },
+        reviewer,
+      );
+      assert.ok(mapped.place.coordinateCitations.length);
+      // The whole archive still validates with the newly mapped place in it.
+      await getArchive();
+      await undoStaffEdit(mapped.edits[0]!.id, 'Back', reviewer);
+      await undoStaffEdit(cleared.edits[0]!.id, 'Back', reviewer);
+      assert.deepEqual(await getArchive(), before);
     });
 
     await t.test(

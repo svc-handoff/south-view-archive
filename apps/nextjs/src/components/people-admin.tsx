@@ -25,6 +25,7 @@ import {
   useStaffRequest,
 } from './admin-shared';
 import { DeleteRecord, RecentlyDeleted } from './admin-delete';
+import { BurialLocate } from './burial-locate';
 
 type Fields = {
   name: string;
@@ -330,14 +331,21 @@ function PersonEditor({
 
   return (
     <section className="review-editor" aria-label={`Edit ${person.name}`}>
-      <header className="review-detail-heading">
-        <span className="theme-label">Person record</span>
-        <h2>{displayPersonName(person.name)}</h2>
-        <p>
-          <Link href={`/people/${encodeURIComponent(person.id)}`} target="_blank">
-            Open the public page <ArrowUpRight size={14} aria-hidden="true" />
-          </Link>
-        </p>
+      <header className="review-detail-heading admin-heading-split">
+        <div>
+          <span className="theme-label">Person record</span>
+          <h2>{displayPersonName(person.name)}</h2>
+          <p>
+            <Link href={`/people/${encodeURIComponent(person.id)}`} target="_blank">
+              Open the public page <ArrowUpRight size={14} aria-hidden="true" />
+            </Link>
+          </p>
+        </div>
+        <BurialLocate
+          person={person}
+          archive={archive}
+          onSaved={(edits, message) => saved(edits, message)}
+        />
       </header>
       <div className="review-detail-content">
         {notice && <CommunityNotice kind="success">{notice}</CommunityNotice>}

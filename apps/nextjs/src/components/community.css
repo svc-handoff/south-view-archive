@@ -345,6 +345,10 @@
   min-height: 48px;
   color: var(--ink);
 }
+/* Browsers ignore line-height on a select, so match a text field's height: line, padding, border. */
+.community-field select {
+  min-height: calc(1lh + 26px);
+}
 .community-field textarea {
   resize: vertical;
   min-height: 150px;

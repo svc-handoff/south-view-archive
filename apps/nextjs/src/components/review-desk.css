@@ -1078,3 +1078,112 @@ form.admin-link-editor {
   margin: 0 0 8px;
   font-size: 14px;
 }
+/* Person record heading: name on the left, the on-site burial tool on the right. */
+.admin-heading-split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+.admin-heading-split > div:first-child {
+  min-width: 0;
+}
+.burial-locate-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1px solid var(--wine);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--wine);
+  font: inherit;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+}
+.burial-locate-start:hover {
+  background: var(--wine);
+  color: var(--surface);
+}
+.burial-locate {
+  display: grid;
+  gap: 10px;
+  flex: 1 1 340px;
+  max-width: 460px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper, #f7f4ec);
+}
+.burial-locate-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.burial-locate-head strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.burial-locate-wait,
+.burial-locate-detail,
+.burial-locate-error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.burial-locate-wait {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.burial-locate-error {
+  color: var(--wine);
+}
+.burial-locate-detail {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.burial-locate-reading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.burial-locate-reading small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.burial-locate-accuracy {
+  flex: none;
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.burial-locate-reading[data-quality='good'] {
+  background: #ecf0e6;
+  border-color: #b9c7a6;
+  color: #33461f;
+}
+.burial-locate-reading[data-quality='fair'] {
+  background: #f6efdc;
+  border-color: #dcc68f;
+  color: #5e4a12;
+}
+.burial-locate-reading[data-quality='poor'] {
+  background: #f6e7e4;
+  border-color: #d9aaa2;
+  color: #7a2a20;
+}
+.burial-locate .community-primary {
+  justify-self: start;
+}

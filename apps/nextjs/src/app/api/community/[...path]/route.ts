@@ -23,6 +23,7 @@ import {
   staffMaterialSchema,
   staffPersonEditSchema,
   staffPlaceEditSchema,
+  staffBurialMapSchema,
   staffRemoveSchema,
   type Actor,
   type SubmissionRecord,
@@ -256,6 +257,14 @@ async function handle(request: Request, context: Context): Promise<Response> {
           await staffEdits.editBiography(
             id,
             staffBiographySchema.parse(await bodyJSON(request)),
+            actor,
+          ),
+        );
+      if (area === 'persons' && id && action === 'burial' && method === 'POST')
+        return json(
+          await staffEdits.mapBurial(
+            id,
+            staffBurialMapSchema.parse(await bodyJSON(request)),
             actor,
           ),
         );

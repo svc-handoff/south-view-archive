@@ -3,21 +3,27 @@
  */
 import { randomUUID } from 'node:crypto';
 import {
+  VERIFIED_ACCURACY_METRES,
   placeSchema,
   relationSchema,
+  staffBurialMapSchema,
   staffLinkCreateSchema,
   staffLinkEditSchema,
   staffPlaceEditSchema,
   staffReasonSchema,
   type Actor,
+  type Citation,
+  type Person,
   type PersonPlace,
   type Place,
+  type StaffBurialMap,
   type StaffLinkCreate,
   type StaffLinkEdit,
   type StaffPlaceEdit,
 } from '@southview/validators';
 import { DomainError } from '../community';
-import { type Data, staffAction, existing } from './core';
+import type { Store } from '../connection';
+import { type Data, staffAction, existing, readRow } from './core';
 
 /** Corrects a map place: name, area, address, position, precision, location note, description. */
 export async function editPlace(placeId: string, raw: StaffPlaceEdit, actor: Actor) {
@@ -40,9 +46,130 @@ export async function editPlace(placeId: string, raw: StaffPlaceEdit, actor: Act
       next.coordinates = patch.coordinates;
       // Citations for a position no longer on the map would describe nothing.
       if (patch.coordinates === null) next.coordinateCitations = [];
+      // A place mapped for the first time needs a citation, or the archive no longer validates.
+      else if (!current.coordinateCitations.length) {
+        next.coordinateCitations = await connectionCitations(tx, placeId);
+        if (!(next.coordinateCitations as Citation[]).length)
+          throw new DomainError(
+            'BAD_REQUEST',
+            'Connect someone to this place before giving it a map position, so the position has a source.',
+          );
+      }
     }
     const place = placeSchema.parse(next);
     return { result: { place }, reason, changes: [{ table: 'places', id: placeId, next: place }] };
+  });
+}
+
+/** The sources behind everyone's connection to a place, once each. */
+async function connectionCitations(tx: Store, placeId: string): Promise<Citation[]> {
+  const links = await tx.query<{ data: PersonPlace }>(
+    'SELECT data FROM archive.person_places WHERE place_id = $1 ORDER BY id',
+    [placeId],
+  );
+  return uniqueCitations(links.rows.flatMap((row) => row.data.citations));
+}
+const uniqueCitations = (citations: Citation[]) => [
+  ...new Map(citations.map((citation) => [citation.sourceId, citation])).values(),
+];
+
+/**
+ * Records where a person is buried from a position measured at the grave with a device's
+ * location. Their one cemetery place (or the one chosen) moves there; a person with none gets a
+ * new grave place and a "Buried here" connection. Readings within VERIFIED_ACCURACY_METRES are
+ * recorded as verified, coarser ones as a reference position, and the note gives the accuracy.
+ */
+export async function mapBurial(personId: string, raw: StaffBurialMap, actor: Actor) {
+  const input = staffBurialMapSchema.parse(raw);
+  return staffAction<{ place: Place; link?: PersonPlace }>(actor, async (tx) => {
+    const person = await existing<Person>(
+      tx,
+      'persons',
+      personId,
+      'This person is not in the archive.',
+    );
+    const coordinates = input.coordinates.map((value) => Math.round(value * 1e6) / 1e6) as [
+      number,
+      number,
+    ];
+    const accuracy = Math.max(1, Math.round(input.accuracy));
+    const precision = accuracy <= VERIFIED_ACCURACY_METRES ? 'verified' : 'reference';
+    const day = new Date().toISOString().slice(0, 10);
+    const locationNote = `Measured at the grave with a phone’s location on ${day}, accurate to about ${accuracy} m.`;
+    const links = (
+      await tx.query<{ data: PersonPlace }>(
+        'SELECT data FROM archive.person_places WHERE person_id = $1 ORDER BY id',
+        [personId],
+      )
+    ).rows.map((row) => row.data);
+    const graves: Place[] = [];
+    for (const link of links) {
+      const place = (await readRow(tx, 'places', link.placeId)) as Place | null;
+      if (place?.scope === 'cemetery' && !graves.some((item) => item.id === place.id))
+        graves.push(place);
+    }
+    const chosen = input.placeId
+      ? graves.find((place) => place.id === input.placeId)
+      : graves.length === 1
+        ? graves[0]
+        : undefined;
+    if (input.placeId && !chosen)
+      throw new DomainError('BAD_REQUEST', 'Choose one of this person’s places in the cemetery.');
+    if (!chosen && graves.length > 1)
+      throw new DomainError(
+        'CONFLICT',
+        'This person has more than one place in the cemetery. Choose which one to move.',
+      );
+    if (chosen) {
+      const citations = chosen.coordinateCitations.length
+        ? chosen.coordinateCitations
+        : uniqueCitations(
+            links.filter((link) => link.placeId === chosen.id).flatMap((link) => link.citations),
+          );
+      const place = placeSchema.parse({
+        ...chosen,
+        coordinates,
+        precision,
+        locationNote,
+        coordinateCitations: citations,
+      });
+      return {
+        result: { place },
+        reason: input.reason,
+        changes: [{ table: 'places', id: place.id, next: place }],
+      };
+    }
+    // No grave yet: the person's own sources say who they are; the reading says where.
+    const citations = uniqueCitations(person.summaryCitations);
+    const place = placeSchema.parse({
+      id: `place-${randomUUID()}`,
+      name: `${person.name} grave`,
+      scope: 'cemetery',
+      coordinates,
+      precision,
+      locationNote,
+      coordinateCitations: citations,
+      summary: '',
+      summaryCitations: [],
+      creditIds: ['initial-compilation'],
+    });
+    const link = relationSchema.parse({
+      id: `link-${randomUUID()}`,
+      personId,
+      placeId: place.id,
+      label: 'Buried here',
+      description: '',
+      citations,
+      creditIds: ['initial-compilation'],
+    });
+    return {
+      result: { place, link },
+      reason: input.reason,
+      changes: [
+        { table: 'places', id: place.id, next: place },
+        { table: 'person_places', id: link.id, next: link },
+      ],
+    };
   });
 }
 
