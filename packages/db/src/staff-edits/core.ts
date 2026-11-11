@@ -17,7 +17,7 @@ import {
   type StaffEdit,
 } from '@southview/validators';
 import type { Store } from '../connection';
-import { DomainError, requireReviewer, writableStore } from '../community';
+import { DomainError, checkGraveLinks, requireReviewer, writableStore } from '../community';
 
 export type Table = StaffEdit['targetTable'];
 
@@ -223,6 +223,11 @@ export async function existing<T>(
   return data as T;
 }
 
+/**
+ * Checks a record's related people and places: they must exist, the record's own person is not
+ * a related person, and a grave at South-View is a related place only of a record about someone
+ * buried there. Used for records, oral histories and published contributions.
+ */
 export async function checkRelated(
   tx: Store,
   personId: string,
@@ -234,4 +239,5 @@ export async function checkRelated(
     await existing(tx, 'persons', id, 'A related person is no longer in the archive.');
   for (const id of related.placeIds)
     await existing(tx, 'places', id, 'A related place is no longer in the archive.');
+  await checkGraveLinks(tx, personId, related.placeIds);
 }

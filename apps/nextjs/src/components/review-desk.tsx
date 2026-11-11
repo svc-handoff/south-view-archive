@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCheck,
+  Flower2,
   Inbox,
   LoaderCircle,
   RefreshCw,
@@ -14,6 +15,12 @@ import {
   Users,
 } from 'lucide-react';
 import {
+  canRelatePlace,
+  graveOccupants,
+  graveTitle,
+  isGrave,
+  personGraves,
+  relatedPlaceOptions,
   reviewInputSchema,
   type ArchiveData,
   type ReviewInput,
@@ -21,6 +28,7 @@ import {
   type VetOverview,
 } from '@southview/validators';
 import { communityRequest, signOutCommunity, type CommunitySession } from '@/lib/community-client';
+import { displayPersonName } from '@/lib/person-name';
 import { formatReviewIssues } from '@/lib/review-validation';
 import {
   filterReviewQueue,
@@ -43,6 +51,7 @@ import { PlacesAdmin } from './places-admin';
 import { useAdminArchive } from './admin-data';
 import { StoryContextFields } from './story-context-fields';
 import { RecordPicker } from './record-picker';
+import { scopeFor } from './location-picker';
 import { PrivateSubmissionPhoto } from './submission-manager';
 import {
   OriginalSubmission,
@@ -57,7 +66,8 @@ import {
 type PlaceDraft = {
   id: string;
   name: string;
-  scope: 'cemetery' | 'atlanta';
+  /** Empty until the reviewer says whether a new place is a grave or a place in Atlanta. */
+  scope: '' | 'cemetery' | 'atlanta';
   lng: string;
   lat: string;
   precision: 'reference' | 'address' | 'verified' | 'unmapped';
@@ -139,7 +149,7 @@ function initialPlace(record: SubmissionRecord, archive: ArchiveData): PlaceDraf
   const empty: PlaceDraft = {
     id: '',
     name: '',
-    scope: 'cemetery',
+    scope: '',
     lng: '',
     lat: '',
     precision: 'unmapped',
@@ -149,14 +159,29 @@ function initialPlace(record: SubmissionRecord, archive: ArchiveData): PlaceDraf
   };
   const placement = record.input.placement;
   if (placement?.section !== 'places') return empty;
-  const existing = archive.places.find((place) => record.input.placeIds.includes(place.id));
+  // A correction edits the place it was written on. An addition that names or pins a new place
+  // starts as that new place, even when it also ticks one the person already has.
+  const relation = archive.relations.find((item) => item.id === placement.blockId);
+  const proposesNew =
+    record.input.kind !== 'correction' &&
+    !!(placement.proposedPlaceName?.trim() || placement.proposedCoordinates);
+  // The update starts on a place this person may have: their own grave or a place in Atlanta,
+  // never another person's grave.
+  const existing = proposesNew
+    ? undefined
+    : archive.places.find(
+        (place) =>
+          (relation ? place.id === relation.placeId : record.input.placeIds.includes(place.id)) &&
+          canRelatePlace(archive, place.id, record.input.personId),
+      );
   if (existing) {
     const moved = placement.proposedCoordinates;
-    const relation = archive.relations.find((item) => item.id === placement.blockId);
     return {
       id: existing.id,
       name: placement.proposedPlaceName ?? existing.name,
-      scope: placement.proposedScope ?? existing.scope,
+      // An existing place keeps its area wherever the contributor's pin landed: a grave stays a
+      // grave, and a place in Atlanta does not become one.
+      scope: existing.scope,
       lng: moved ? String(moved[0]) : existing.coordinates ? String(existing.coordinates[0]) : '',
       lat: moved ? String(moved[1]) : existing.coordinates ? String(existing.coordinates[1]) : '',
       precision: moved ? 'reference' : existing.precision,
@@ -171,7 +196,9 @@ function initialPlace(record: SubmissionRecord, archive: ArchiveData): PlaceDraf
   return {
     ...empty,
     name: placement.proposedPlaceName ?? '',
-    scope: placement.proposedScope ?? 'cemetery',
+    // A pin says where the place is; without one the reviewer decides. Nothing becomes a
+    // grave by default, because a grave is where someone is buried.
+    scope: placement.proposedScope ?? (coordinates ? scopeFor(coordinates) : ''),
     lng: coordinates ? String(coordinates[0]) : '',
     lat: coordinates ? String(coordinates[1]) : '',
     precision: coordinates ? 'reference' : 'unmapped',
@@ -212,6 +239,13 @@ function placementExplanation(record: SubmissionRecord, applyTo: ReviewInput['ap
   return '';
 }
 
+/** The tab a place record belongs on: a grave on Graves, a place in Atlanta on Places. */
+function placeTab(archive: ArchiveData, tab: AdminTab, recordId: string | null): AdminTab {
+  if ((tab !== 'graves' && tab !== 'places') || !recordId) return tab;
+  const place = archive.places.find((item) => item.id === recordId);
+  return place ? (isGrave(place) ? 'graves' : 'places') : tab;
+}
+
 export function ReviewDesk({
   archive,
   initialTab,
@@ -223,17 +257,30 @@ export function ReviewDesk({
 }) {
   const params = useSearchParams();
   const [state, setState] = useState(() => parseReviewState(params));
+  // An old /admin/places/<grave> address (or the reverse) opens the record on its own tab.
+  const startTab = placeTab(archive, initialTab, initialRecordId);
   // The admin has two areas: the contribution queue and direct record corrections.
-  const [tab, setTab] = useState<AdminTab>(initialTab);
+  const [tab, setTab] = useState<AdminTab>(startTab);
   const [adminPerson, setAdminPerson] = useState<string | null>(
-    initialTab === 'people' ? initialRecordId : null,
+    startTab === 'people' ? initialRecordId : null,
   );
   const [adminEntry, setAdminEntry] = useState<string | null>(null);
-  const [adminPlace, setAdminPlace] = useState<string | null>(
-    initialTab === 'places' ? initialRecordId : null,
+  const [adminGrave, setAdminGrave] = useState<string | null>(
+    startTab === 'graves' ? initialRecordId : null,
   );
+  const [adminPlace, setAdminPlace] = useState<string | null>(
+    startTab === 'places' ? initialRecordId : null,
+  );
+  useEffect(() => {
+    if (startTab !== initialTab && startTab !== 'contributions')
+      window.history.replaceState(null, '', adminRecordUrl(startTab, initialRecordId));
+  }, [startTab, initialTab, initialRecordId]);
   // Server data with every change saved during this visit applied, shared by the record tabs.
   const admin = useAdminArchive(archive);
+  const archiveRef = useRef(admin.archive);
+  useEffect(() => {
+    archiveRef.current = admin.archive;
+  }, [admin.archive]);
   // Bumped when another tab opens a record, so the record tab starts on it.
   const [nav, setNav] = useState(0);
   const [session, setSession] = useState<CommunitySession | null>(null);
@@ -357,9 +404,11 @@ export function ReviewDesk({
         const search = new URLSearchParams(window.location.search);
         const next = parseReviewState(search);
         const location = parseAdminPath(window.location.pathname);
-        setTab(location.tab);
-        if (location.tab === 'people') setAdminPerson(location.recordId);
-        if (location.tab === 'places') setAdminPlace(location.recordId);
+        const locationTab = placeTab(archiveRef.current, location.tab, location.recordId);
+        setTab(locationTab);
+        if (locationTab === 'people') setAdminPerson(location.recordId);
+        if (locationTab === 'graves') setAdminGrave(location.recordId);
+        if (locationTab === 'places') setAdminPlace(location.recordId);
         setNav((value) => value + 1);
         setState(next);
         setMobileDetail(!!next.submission);
@@ -396,6 +445,7 @@ export function ReviewDesk({
   const recordUrl = adminRecordUrl;
   function go(next: AdminTab, recordId?: string) {
     if (next === 'people' && recordId !== undefined) setAdminPerson(recordId);
+    if (next === 'graves' && recordId !== undefined) setAdminGrave(recordId);
     if (next === 'places' && recordId !== undefined) setAdminPlace(recordId);
     setTab(next);
     setNav((value) => value + 1);
@@ -405,13 +455,27 @@ export function ReviewDesk({
       '',
       next === 'contributions'
         ? reviewUrl(state)
-        : recordUrl(next, recordId ?? (next === 'people' ? adminPerson : adminPlace)),
+        : recordUrl(
+            next,
+            recordId ??
+              (next === 'people' ? adminPerson : next === 'graves' ? adminGrave : adminPlace),
+          ),
     );
     currentUrl.current = window.location.href;
   }
+  /** Opens a place on its own tab: a grave on Graves, a place in Atlanta on Places. */
+  function openPlace(placeId: string) {
+    go(placeTab(admin.archive, 'places', placeId), placeId);
+  }
   // The page title follows the area, as it would on a fresh load of that address.
   useEffect(() => {
-    document.title = `${tab === 'people' ? 'People · ' : tab === 'places' ? 'Places · ' : ''}Archive admin · South-View`;
+    const area = {
+      people: 'People · ',
+      graves: 'Graves · ',
+      places: 'Places · ',
+      contributions: '',
+    };
+    document.title = `${area[tab]}Archive admin · South-View`;
   }, [tab]);
   function switchTab(next: AdminTab) {
     if (next === tab || !confirmLeave()) return;
@@ -493,6 +557,9 @@ export function ReviewDesk({
         <button role="tab" aria-selected={tab === 'people'} onClick={() => switchTab('people')}>
           <Users size={17} aria-hidden="true" /> People
         </button>
+        <button role="tab" aria-selected={tab === 'graves'} onClick={() => switchTab('graves')}>
+          <Flower2 size={17} aria-hidden="true" /> Graves
+        </button>
         <button role="tab" aria-selected={tab === 'places'} onClick={() => switchTab('places')}>
           <MapPin size={17} aria-hidden="true" /> Places
         </button>
@@ -507,25 +574,28 @@ export function ReviewDesk({
           onDirtyChange={onDirtyChange}
           confirmLeave={confirmLeave}
           onSaved={admin.apply}
-          onOpenPlace={(placeId) => go('places', placeId)}
+          onOpenPlace={openPlace}
           onPersonChange={(personId) => {
             setAdminPerson(personId);
             window.history.replaceState(null, '', recordUrl('people', personId));
             currentUrl.current = window.location.href;
           }}
         />
-      ) : tab === 'places' ? (
+      ) : tab === 'graves' || tab === 'places' ? (
         <PlacesAdmin
-          key={`places-${nav}`}
+          key={`${tab}-${nav}`}
+          kind={tab}
           archive={admin.archive}
-          initialPlaceId={adminPlace}
+          initialPlaceId={tab === 'graves' ? adminGrave : adminPlace}
           onDirtyChange={onDirtyChange}
           confirmLeave={confirmLeave}
           onSaved={admin.apply}
           onOpenPerson={(personId) => go('people', personId)}
+          onOpenPlace={openPlace}
           onPlaceChange={(placeId) => {
-            setAdminPlace(placeId);
-            window.history.replaceState(null, '', recordUrl('places', placeId));
+            if (tab === 'graves') setAdminGrave(placeId);
+            else setAdminPlace(placeId);
+            window.history.replaceState(null, '', recordUrl(tab, placeId));
             currentUrl.current = window.location.href;
           }}
         />
@@ -685,6 +755,37 @@ function ReviewEditor({
   const personPatch = personPatchFor(personFields, initialPersonFields.current, !!draft.personId);
   const themeOptions = [...new Set(archive.people.flatMap((person) => person.themes))];
   const placementHint = placementExplanation(record, applyTo);
+  // A grave belongs to its people. The places mentioned and the map place update offer the
+  // chosen person's own grave and the places in Atlanta, never another person's grave.
+  const ownGraves = personGraves(archive, draft.personId);
+  const ownGraveIds = new Set(ownGraves.map((item) => item.id));
+  const atlantaPlaces = archive.places
+    .filter((item) => !isGrave(item))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  // Places already chosen stay listed, marked, so the reviewer sees what would be published.
+  const mentionedPlaces = relatedPlaceOptions(archive, draft.personId, draft.placeIds).map(
+    (item) => ({
+      id: item.id,
+      name: ownGraveIds.has(item.id)
+        ? `${item.name} (their grave)`
+        : isGrave(item)
+          ? `${item.name} (not this person’s grave)`
+          : item.name,
+      scope: item.scope,
+    }),
+  );
+  // The place the update already points at, even when this person may not have it, for
+  // example after the reviewer chose another person, so the choice stays visible.
+  const targetPlace = archive.places.find((item) => item.id === place.id);
+  const unlistedTarget =
+    !!place.id && !ownGraveIds.has(place.id) && !atlantaPlaces.some((item) => item.id === place.id);
+  const otherOccupants =
+    targetPlace && isGrave(targetPlace) && !ownGraveIds.has(targetPlace.id)
+      ? graveOccupants(archive, targetPlace.id).map((id) => {
+          const occupant = archive.people.find((person) => person.id === id);
+          return occupant ? displayPersonName(occupant.name) : 'another person';
+        })
+      : [];
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -749,7 +850,7 @@ function ReviewEditor({
         : {
             id: '',
             name: '',
-            scope: 'cemetery',
+            scope: '',
             lng: '',
             lat: '',
             precision: 'unmapped',
@@ -797,6 +898,12 @@ function ReviewEditor({
       setError('Supply both longitude and latitude, or choose Not yet mapped.');
       return;
     }
+    if (action === 'publish' && applyTo === 'place' && !place.scope) {
+      setError(
+        'Choose whether the new place is where this person is buried at South-View, or a place in Atlanta.',
+      );
+      return;
+    }
     const payload: ReviewInput =
       action !== 'publish'
         ? {
@@ -821,7 +928,7 @@ function ReviewEditor({
                   placePatch: {
                     placeId: place.id || `community-place-${record.id}`,
                     name: place.name,
-                    scope: place.scope,
+                    scope: place.scope || 'atlanta',
                     coordinates:
                       place.precision === 'unmapped'
                         ? null
@@ -1121,7 +1228,7 @@ function ReviewEditor({
                 <summary>Confirm people, places, and event date</summary>
                 <StoryContextFields
                   people={archive.people}
-                  places={archive.places}
+                  places={mentionedPlaces}
                   primaryPersonId={draft.personId}
                   value={draft}
                   onChange={(context) => {
@@ -1321,12 +1428,37 @@ function ReviewEditor({
                         onChange={(event) => choosePlace(event.target.value)}
                       >
                         <option value="">Add a new place</option>
-                        {archive.places.map((place) => (
-                          <option value={place.id} key={place.id}>
-                            {place.name}
+                        {unlistedTarget && (
+                          <option value={place.id}>
+                            {targetPlace
+                              ? `${targetPlace.name} (not this person’s grave)`
+                              : place.name}
                           </option>
-                        ))}
+                        )}
+                        {ownGraves.length > 0 && (
+                          <optgroup label="Their grave">
+                            {ownGraves.map((item) => (
+                              <option value={item.id} key={item.id}>
+                                {item.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="Places in Atlanta">
+                          {atlantaPlaces.map((item) => (
+                            <option value={item.id} key={item.id}>
+                              {item.name}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
+                      {otherOccupants.length > 0 && (
+                        <small className="review-placement-hint" role="alert">
+                          {graveTitle(otherOccupants)} is another person’s grave. Publishing would
+                          change it, so it will be refused. Choose this person’s grave, a place in
+                          Atlanta, or a new place.
+                        </small>
+                      )}
                     </label>
                     <label className="community-field">
                       <span>Place name</span>
@@ -1355,16 +1487,27 @@ function ReviewEditor({
                         <span>Area</span>
                         <select
                           value={place.scope}
+                          disabled={!!targetPlace}
                           onChange={(event) =>
                             setPlace((previous) => ({
                               ...previous,
-                              scope: event.target.value as 'cemetery' | 'atlanta',
+                              scope: event.target.value as PlaceDraft['scope'],
                             }))
                           }
                         >
-                          <option value="cemetery">South-View Cemetery</option>
-                          <option value="atlanta">Atlanta</option>
+                          {!place.scope && (
+                            <option value="" disabled>
+                              Choose: their grave, or a place in Atlanta
+                            </option>
+                          )}
+                          <option value="cemetery">Their grave at South-View Cemetery</option>
+                          <option value="atlanta">A place in Atlanta</option>
                         </select>
+                        {targetPlace ? (
+                          <small>An existing place keeps its area.</small>
+                        ) : (
+                          <small>A grave is where this person is buried.</small>
+                        )}
                       </label>
                       <label className="community-field">
                         <span>Position precision</span>

@@ -5,6 +5,7 @@ import {
   formatLifeDate,
   portraitRights,
   publicRelatedPersonIds,
+  relatedPlaceOptions,
   type ArchiveData,
   type EventDate,
   type Person,
@@ -129,6 +130,13 @@ export function PersonArchive({
     ...(person.portrait ? [person.portrait.sourceId] : []),
   ]);
   const sources = data.sources.filter((source) => usedSourceIds.has(source.id));
+  // The in-page editor offers the places in Atlanta and this person's own grave. Another
+  // person's grave belongs to them and is never a place of this life.
+  const editPlaces = relatedPlaceOptions(data, person.id).map(({ id, name, scope }) => ({
+    id,
+    name,
+    scope,
+  }));
 
   return (
     <div className="archive-page">
@@ -136,7 +144,7 @@ export function PersonArchive({
 
       <PersonEditProvider
         person={{ id: person.id, name: displayPersonName(person.name) }}
-        places={data.places.map(({ id, name, scope }) => ({ id, name, scope }))}
+        places={editPlaces}
         startEditing={startEditing}
       >
         <main id="main-content">

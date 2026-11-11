@@ -2,12 +2,15 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ArrowUpRight, LoaderCircle, MessageSquareQuote } from 'lucide-react';
-import type {
-  ArchiveData,
-  ContributionEntry,
-  EventDate,
-  Person,
-  StaffEdit,
+import {
+  isGrave,
+  personGraves,
+  relatedPlaceOptions,
+  type ArchiveData,
+  type ContributionEntry,
+  type EventDate,
+  type Person,
+  type StaffEdit,
 } from '@southview/validators';
 import { displayPersonName } from '@/lib/person-name';
 import { CommunityNotice } from './community-shell';
@@ -127,7 +130,14 @@ function ContributionForm({
   const people = archive.people
     .filter((item) => item.id !== person.id)
     .sort((a, b) => a.name.localeCompare(b.name));
-  const places = [...archive.places].sort((a, b) => a.name.localeCompare(b.name));
+  // The places it mentions are places in Atlanta and the person's own grave, their grave first.
+  // Another person's grave is never offered; one already chosen stays listed, marked, so it can
+  // be taken off.
+  const ownGraveIds = new Set(personGraves(archive, entry.personId).map((place) => place.id));
+  const places = relatedPlaceOptions(archive, entry.personId, placeIds).sort(
+    (a, b) =>
+      Number(ownGraveIds.has(b.id)) - Number(ownGraveIds.has(a.id)) || a.name.localeCompare(b.name),
+  );
   const portraitUrls = new Set(
     archive.people.flatMap((item) => (item.portrait ? [item.portrait.url] : [])),
   );
@@ -313,7 +323,13 @@ function ContributionForm({
         items={places}
         selected={placeIds}
         onChange={setPlaceIds}
-        label={(place) => place.name}
+        label={(place) =>
+          ownGraveIds.has(place.id)
+            ? `${place.name} (their grave)`
+            : isGrave(place)
+              ? `${place.name} (not this person’s grave)`
+              : place.name
+        }
       />
       <label className="community-field">
         <span>Public note</span>

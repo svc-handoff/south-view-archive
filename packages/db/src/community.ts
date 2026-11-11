@@ -150,6 +150,42 @@ async function checkPerson(tx: Store, id: string) {
   return personSchema.parse(person);
 }
 
+/** "A", "A and B", "A, B and C". */
+function nameList(names: readonly string[]) {
+  return names.length < 2
+    ? (names[0] ?? '')
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * A grave at South-View belongs to the people buried there: it may be a related place of a
+ * record or story about one of them, and never of anyone else. Places in Atlanta are open to
+ * every record. Without a person (a proposed new person), every grave is refused. Graves are
+ * the places whose scope is the cemetery; the people buried in one are those connected to it.
+ */
+export async function checkGraveLinks(
+  tx: Store,
+  personId: string | null,
+  placeIds: readonly string[],
+) {
+  const ids = [...new Set(placeIds)];
+  if (!ids.length) return;
+  const graves = (
+    await tx.query<{ id: string; name: string; buried: boolean }>(
+      `SELECT p.id, p.data->>'name' AS name, EXISTS (SELECT 1 FROM archive.person_places r WHERE r.place_id = p.id AND r.person_id = $2) AS buried FROM archive.places p WHERE p.id = ANY($1::text[]) AND p.data->>'scope' = 'cemetery'`,
+      [ids, personId],
+    )
+  ).rows;
+  const refused = ids
+    .map((id) => graves.find((grave) => grave.id === id))
+    .find((grave) => grave && !grave.buried);
+  if (refused)
+    throw new DomainError(
+      'BAD_REQUEST',
+      `${refused.name} is a grave at South-View, so it can only be a related place of someone buried there.`,
+    );
+}
+
 async function checkLinkedRecords(
   tx: Store,
   input: { personId: string | null; relatedPersonIds: string[]; placeIds: string[] },
@@ -178,6 +214,7 @@ async function checkLinkedRecords(
         `A linked ${label} is unavailable. Review the selected archive records.`,
       );
   }
+  await checkGraveLinks(tx, input.personId, places);
 }
 
 export async function createDraft(raw: SubmissionInput, actor: Actor, receiptToken: string) {
@@ -715,11 +752,31 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
         [patch.placeId],
       )
     ).rows[0]?.data;
+    // An update may reach this person's own grave, or a grave no one is connected to yet, but
+    // never another person's grave. A new place created here is this person's from the start.
+    if (current?.scope === 'cemetery') {
+      const occupants = (
+        await tx.query<{ person_id: string; name: string }>(
+          `SELECT r.person_id, p.data->>'name' AS name FROM archive.person_places r JOIN archive.persons p ON p.id = r.person_id WHERE r.place_id = $1 ORDER BY r.id`,
+          [patch.placeId],
+        )
+      ).rows;
+      if (occupants.length && !occupants.some((occupant) => occupant.person_id === personId)) {
+        const names = nameList([...new Set(occupants.map((occupant) => occupant.name))]);
+        // A name such as "Martin Luther King Sr." already ends the sentence.
+        throw new DomainError(
+          'BAD_REQUEST',
+          `That grave belongs to ${names}${names.endsWith('.') ? '' : '.'} Choose this person’s grave or a place in Atlanta.`,
+        );
+      }
+    }
     const place = placeSchema.parse({
       ...current,
       id: patch.placeId,
       name: patch.name,
-      scope: patch.scope,
+      // An existing place keeps its area: a grave stays a grave and a place in Atlanta stays a
+      // place, whatever the request says. Only a place created here takes the reviewer's choice.
+      scope: typeof current?.scope === 'string' ? current.scope : patch.scope,
       coordinates: patch.coordinates,
       precision: patch.precision,
       locationNote: patch.locationNote,

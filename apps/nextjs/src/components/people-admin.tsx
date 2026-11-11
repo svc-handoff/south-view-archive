@@ -1,17 +1,31 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, ArrowUpRight, LoaderCircle, MapPin, Plus, Search, Users } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  Flower2,
+  LoaderCircle,
+  MapPin,
+  Plus,
+  Search,
+  Users,
+} from 'lucide-react';
 import {
   formatLifeDate,
+  graveOccupants,
+  graveTitle,
+  isGrave,
   monthName,
   type ArchiveData,
   type Person,
   type PersonPlace,
+  type Place,
   type StaffEdit,
   type StaffPersonEdit,
 } from '@southview/validators';
 import { displayPersonName } from '@/lib/person-name';
+import { precisionLabels } from '@/lib/place-mode';
 import { CommunityNotice } from './community-shell';
 import { ChangeHistory, fieldLabels, useStaffHistory } from './admin-history';
 import { PersonMaterials, PersonNotes } from './person-records-admin';
@@ -92,6 +106,24 @@ const years = (person: Person) =>
     ? `${person.birthYear ?? '?'} – ${person.deathYear ?? '?'}`
     : 'Years unknown';
 const months = Array.from({ length: 12 }, (_, index) => index + 1);
+
+/** Display names of the people buried in a grave, leaving out `except`. */
+const buriedNames = (archive: ArchiveData, placeId: string, except?: string) =>
+  graveOccupants(archive, placeId).flatMap((id) => {
+    const person = id === except ? undefined : archive.people.find((item) => item.id === id);
+    return person ? [displayPersonName(person.name)] : [];
+  });
+/** "A", "A and B", "A, B and C". */
+const joinNames = (names: string[]) =>
+  names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : (names[0] ?? '');
+/** Whether two names read the same, whatever the spacing (such as the fixed space before Sr.). */
+const sameName = (a: string, b: string) =>
+  a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
+/** A grave as a choice: named by the people buried there, then by its own name when that differs. */
+function graveChoice(archive: ArchiveData, place: Place) {
+  const title = graveTitle(buriedNames(archive, place.id));
+  return sameName(title, place.name) ? title : `${title} · ${place.name}`;
+}
 
 export function PeopleAdmin({
   archive,
@@ -486,68 +518,133 @@ function PersonLinks({
   onOpenPlace: (placeId: string) => void;
   onSaved: (edits: StaffEdit[], message: string) => void;
 }) {
-  const links = archive.relations.filter((item) => item.personId === person.id);
+  const links = archive.relations
+    .filter((item) => item.personId === person.id)
+    .map((link) => ({ link, place: archive.places.find((item) => item.id === link.placeId) }));
+  // Where they are buried, kept apart from the places in their life in Atlanta.
+  const graveLinks = links.filter(
+    (item): item is { link: PersonPlace; place: Place } => !!item.place && isGrave(item.place),
+  );
+  const placeLinks = links.filter((item) => !item.place || !isGrave(item.place));
+  // The one form open: a connection's id, or a new connection to a grave or a place.
   const [open, setOpen] = useState<string | null>(null);
-  return (
-    <section className="admin-section" aria-labelledby="admin-links-heading">
-      <h3 id="admin-links-heading">
-        <MapPin size={18} aria-hidden="true" /> Places connected to this person
-      </h3>
-      {!links.length && <p className="admin-history-note">No places are connected yet.</p>}
-      <ul className="admin-links">
-        {links.map((link) => {
-          const place = archive.places.find((item) => item.id === link.placeId);
-          return (
-            <li key={link.id}>
-              <div className="admin-link-summary">
-                <div>
-                  <strong>{place?.name ?? 'Unknown place'}</strong>
-                  <span>{link.label}</span>
-                </div>
-                <div className="admin-link-actions">
-                  <button
-                    className="community-text-button"
-                    onClick={() => setOpen(open === link.id ? null : link.id)}
-                    aria-expanded={open === link.id}
-                  >
-                    {open === link.id ? 'Close' : 'Edit'}
-                  </button>
-                  {place && (
-                    <button className="community-text-button" onClick={() => onOpenPlace(place.id)}>
-                      Open place
-                    </button>
-                  )}
-                </div>
-              </div>
-              {open === link.id && (
-                <LinkEditor
-                  link={link}
-                  onSaved={(edits, message) => {
-                    setOpen(null);
-                    onSaved(edits, message);
-                  }}
-                />
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {open === 'new' ? (
-        <NewLink
-          person={person}
-          archive={archive}
-          onCancel={() => setOpen(null)}
-          onSaved={(edits) => {
+
+  /** A connection: the place, what connects them, and its Edit form. */
+  const row = (
+    link: PersonPlace,
+    place: Place | undefined,
+    details: string[],
+    openLabel: string,
+  ) => (
+    <li key={link.id}>
+      <div className="admin-link-summary">
+        <div>
+          <strong>{place?.name ?? 'Unknown place'}</strong>
+          {details.map((text, index) => (
+            <span key={index}>{text}</span>
+          ))}
+        </div>
+        <div className="admin-link-actions">
+          <button
+            className="community-text-button"
+            onClick={() => setOpen(open === link.id ? null : link.id)}
+            aria-expanded={open === link.id}
+          >
+            {open === link.id ? 'Close' : 'Edit'}
+          </button>
+          {place && (
+            <button className="community-text-button" onClick={() => onOpenPlace(place.id)}>
+              {openLabel}
+            </button>
+          )}
+        </div>
+      </div>
+      {open === link.id && (
+        <LinkEditor
+          link={link}
+          onSaved={(edits, message) => {
             setOpen(null);
-            onSaved(edits, 'Connected. The place now appears on this person’s page and map.');
+            onSaved(edits, message);
           }}
         />
-      ) : (
-        <button className="community-secondary" onClick={() => setOpen('new')}>
-          <Plus size={16} aria-hidden="true" /> Connect to a place on the map
-        </button>
       )}
-    </section>
+    </li>
+  );
+  const newLink = (burial: boolean) => (
+    <NewLink
+      person={person}
+      archive={archive}
+      burial={burial}
+      onCancel={() => setOpen(null)}
+      onSaved={(edits) => {
+        setOpen(null);
+        onSaved(
+          edits,
+          burial
+            ? 'Connected. They now appear at this grave on the map.'
+            : 'Connected. The place now appears on this person’s page and map.',
+        );
+      }}
+    />
+  );
+
+  return (
+    <>
+      <section className="admin-section" aria-labelledby="admin-grave-heading">
+        <h3 id="admin-grave-heading">
+          <Flower2 size={18} aria-hidden="true" /> Grave
+        </h3>
+        {graveLinks.length > 0 ? (
+          <ul className="admin-links">
+            {graveLinks.map(({ link, place }) => {
+              const shared = buriedNames(archive, place.id, person.id);
+              return row(
+                link,
+                place,
+                [
+                  `${link.label} · ${precisionLabels[place.precision]}`,
+                  ...(shared.length ? [`Shared with ${joinNames(shared)}`] : []),
+                ],
+                'Open grave',
+              );
+            })}
+          </ul>
+        ) : (
+          <>
+            <p className="admin-history-note">
+              No grave on the map yet. At the grave, use Map burial here at the top of this record.
+            </p>
+            {open === 'new:grave' ? (
+              newLink(true)
+            ) : (
+              <button
+                type="button"
+                className="community-text-button"
+                onClick={() => setOpen('new:grave')}
+              >
+                Share a grave already on the map
+              </button>
+            )}
+          </>
+        )}
+      </section>
+      <section className="admin-section" aria-labelledby="admin-links-heading">
+        <h3 id="admin-links-heading">
+          <MapPin size={18} aria-hidden="true" /> Places in their life
+        </h3>
+        {!placeLinks.length && <p className="admin-history-note">No places are connected yet.</p>}
+        <ul className="admin-links">
+          {placeLinks.map(({ link, place }) => row(link, place, [link.label], 'Open place'))}
+        </ul>
+        {open === 'new:place' ? (
+          newLink(false)
+        ) : (
+          <button className="community-secondary" onClick={() => setOpen('new:place')}>
+            <Plus size={16} aria-hidden="true" /> Connect to a place in Atlanta
+          </button>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -627,24 +724,29 @@ function LinkEditor({
 function NewLink({
   person,
   archive,
+  burial,
   onCancel,
   onSaved,
 }: {
   person: Person;
   archive: ArchiveData;
+  /** Buried in a grave already on the map, such as a family crypt or lot, not a place in Atlanta. */
+  burial: boolean;
   onCancel: () => void;
   onSaved: (edits: StaffEdit[]) => void;
 }) {
   const linked = new Set(
     archive.relations.filter((item) => item.personId === person.id).map((item) => item.placeId),
   );
-  const places = archive.places
-    .filter((place) => !linked.has(place.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  // A grave is offered only to share it with someone buried there, never as a place in a life.
+  const options = archive.places
+    .filter((place) => !linked.has(place.id) && isGrave(place) === burial)
+    .map((place) => ({ id: place.id, label: burial ? graveChoice(archive, place) : place.name }))
+    .sort((a, b) => a.label.localeCompare(b.label));
   const cited = personSourceIds(person, archive);
   const sources = archive.sources.filter((source) => cited.has(source.id));
   const [placeId, setPlaceId] = useState('');
-  const [label, setLabel] = useState('');
+  const [label, setLabel] = useState(burial ? 'Buried here' : '');
   const [description, setDescription] = useState('');
   const [sourceId, setSourceId] = useState(sources[0]?.id ?? '');
   const [reason, setReason] = useState('');
@@ -653,7 +755,9 @@ function NewLink({
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!placeId || !label.trim() || !sourceId) {
-      setError('Choose a place, describe the relationship and choose a source.');
+      setError(
+        `Choose a ${burial ? 'grave' : 'place'}, describe the relationship and choose a source.`,
+      );
       return;
     }
     const edits = await send(
@@ -664,6 +768,7 @@ function NewLink({
         label: label.trim(),
         description: description.trim(),
         sourceId,
+        burial,
       },
       reason,
       { failure: 'The connection could not be saved.' },
@@ -675,23 +780,29 @@ function NewLink({
     <form className="admin-link-editor" onSubmit={save}>
       {error && <CommunityNotice kind="error">{error}</CommunityNotice>}
       <label className="community-field">
-        <span>Place *</span>
+        <span>{burial ? 'Grave *' : 'Place *'}</span>
         <select value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
-          <option value="">Choose a place already on the map</option>
-          {places.map((place) => (
-            <option key={place.id} value={place.id}>
-              {place.name}
+          <option value="">
+            {burial ? 'Choose a grave already on the map' : 'Choose a place already on the map'}
+          </option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
             </option>
           ))}
         </select>
-        <small>New places still arrive through contributions.</small>
+        <small>
+          {burial
+            ? 'For a family crypt or lot already on the map, shared with someone buried there.'
+            : 'Graves are not listed here. Each person’s grave is in the Grave section above.'}
+        </small>
       </label>
       <label className="community-field">
         <span>Relationship *</span>
         <input
           value={label}
           maxLength={160}
-          placeholder="For example: Buried here, Pastor 1931–1975"
+          placeholder={burial ? 'For example: Buried here' : 'For example: Pastor 1931–1975'}
           onChange={(event) => setLabel(event.target.value)}
         />
       </label>

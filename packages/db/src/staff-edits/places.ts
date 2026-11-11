@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto';
 import {
   VERIFIED_ACCURACY_METRES,
+  isGrave,
   placeSchema,
   relationSchema,
   staffBurialMapSchema,
@@ -25,7 +26,10 @@ import { DomainError } from '../community';
 import type { Store } from '../connection';
 import { type Data, staffAction, existing, readRow } from './core';
 
-/** Corrects a map place: name, area, address, position, precision, location note, description. */
+/**
+ * Corrects a map place: name, address, position, precision, location note, description. Its
+ * area never changes here: a grave stays a grave and a place in Atlanta stays a place.
+ */
 export async function editPlace(placeId: string, raw: StaffPlaceEdit, actor: Actor) {
   const { patch, reason } = staffPlaceEditSchema.parse(raw);
   return staffAction(actor, async (tx) => {
@@ -36,7 +40,7 @@ export async function editPlace(placeId: string, raw: StaffPlaceEdit, actor: Act
       'This place is not in the archive.',
     );
     const next: Data = { ...current };
-    for (const field of ['name', 'scope', 'precision', 'locationNote', 'summary'] as const)
+    for (const field of ['name', 'precision', 'locationNote', 'summary'] as const)
       if (patch[field] !== undefined) next[field] = patch[field];
     if (patch.address !== undefined) {
       if (patch.address) next.address = patch.address;
@@ -105,7 +109,7 @@ export async function mapBurial(personId: string, raw: StaffBurialMap, actor: Ac
     const graves: Place[] = [];
     for (const link of links) {
       const place = (await readRow(tx, 'places', link.placeId)) as Place | null;
-      if (place?.scope === 'cemetery' && !graves.some((item) => item.id === place.id))
+      if (place && isGrave(place) && !graves.some((item) => item.id === place.id))
         graves.push(place);
     }
     const chosen = input.placeId
@@ -143,7 +147,7 @@ export async function mapBurial(personId: string, raw: StaffBurialMap, actor: Ac
     const citations = uniqueCitations(person.summaryCitations);
     const place = placeSchema.parse({
       id: `place-${randomUUID()}`,
-      name: `${person.name} grave`,
+      name: `Grave of ${person.name}`,
       scope: 'cemetery',
       coordinates,
       precision,
@@ -196,12 +200,27 @@ export async function editLink(linkId: string, raw: StaffLinkEdit, actor: Actor)
   });
 }
 
-/** Connects a person to a place already on the map. */
+/**
+ * Connects a person to a place already on the map. A grave takes only someone buried there
+ * (`burial`, for a shared crypt or family lot); a place in Atlanta takes any other connection.
+ */
 export async function createLink(raw: StaffLinkCreate, actor: Actor) {
   const input = staffLinkCreateSchema.parse(raw);
   return staffAction(actor, async (tx) => {
     await existing(tx, 'persons', input.personId, 'This person is not in the archive.');
-    await existing(tx, 'places', input.placeId, 'This place is not in the archive.');
+    const place = await existing<Place>(
+      tx,
+      'places',
+      input.placeId,
+      'This place is not in the archive.',
+    );
+    if (isGrave(place) && !input.burial)
+      throw new DomainError(
+        'BAD_REQUEST',
+        'That is a grave at South-View, not a place from someone’s life. Add a person buried there from the grave section of their record.',
+      );
+    if (!isGrave(place) && input.burial)
+      throw new DomainError('BAD_REQUEST', 'Choose a grave at South-View Cemetery.');
     await existing(tx, 'sources', input.sourceId, 'Choose a source that is in the archive.');
     const duplicate = await tx.query(
       'SELECT id FROM archive.person_places WHERE person_id = $1 AND place_id = $2 LIMIT 1',

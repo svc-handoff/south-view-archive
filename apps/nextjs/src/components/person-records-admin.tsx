@@ -1,13 +1,16 @@
 'use client';
 import { useState, type FormEvent } from 'react';
 import { BookOpen, FileWarning, Headphones, LoaderCircle, Plus } from 'lucide-react';
-import type {
-  ArchiveData,
-  EventDate,
-  Material,
-  Person,
-  Source,
-  StaffEdit,
+import {
+  isGrave,
+  personGraves,
+  relatedPlaceOptions,
+  type ArchiveData,
+  type EventDate,
+  type Material,
+  type Person,
+  type Source,
+  type StaffEdit,
 } from '@southview/validators';
 import { displayPersonName } from '@/lib/person-name';
 import { CommunityNotice } from './community-shell';
@@ -205,11 +208,19 @@ function MaterialForm({
   const [link, setLink] = useState<LinkFields>(material ? linkFor(chosen) : emptyLink);
   const [reason, setReason] = useState('');
   const { busy, error, setError, send } = useStaffRequest();
+  // Related places are the places in Atlanta and this person's own grave, their grave first and
+  // then the places connected to them. Another person's grave is never offered; one already
+  // chosen stays listed, marked, so it can be taken off.
+  const recordPersonId = material?.personId ?? person.id;
+  const ownGraveIds = new Set(personGraves(archive, recordPersonId).map((place) => place.id));
   const linkedPlaceIds = new Set(
-    archive.relations.filter((item) => item.personId === person.id).map((item) => item.placeId),
+    archive.relations
+      .filter((item) => item.personId === recordPersonId)
+      .map((item) => item.placeId),
   );
-  const places = [...archive.places].sort(
+  const places = relatedPlaceOptions(archive, recordPersonId, placeIds).sort(
     (a, b) =>
+      Number(ownGraveIds.has(b.id)) - Number(ownGraveIds.has(a.id)) ||
       Number(linkedPlaceIds.has(b.id)) - Number(linkedPlaceIds.has(a.id)) ||
       a.name.localeCompare(b.name),
   );
@@ -466,12 +477,18 @@ function MaterialForm({
         items={places}
         selected={placeIds}
         onChange={setPlaceIds}
-        label={(place) => (
-          <>
-            {place.name}
-            {linkedPlaceIds.has(place.id) && <small>Connected to this person</small>}
-          </>
-        )}
+        label={(place) =>
+          ownGraveIds.has(place.id) ? (
+            `${place.name} (their grave)`
+          ) : isGrave(place) ? (
+            `${place.name} (not this person’s grave)`
+          ) : (
+            <>
+              {place.name}
+              {linkedPlaceIds.has(place.id) && <small>Connected to this person</small>}
+            </>
+          )
+        }
       />
       <Checklist
         legend="Other people it concerns"

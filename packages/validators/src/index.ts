@@ -11,6 +11,7 @@ export * from './community';
 export * from './discovery';
 export * from './auth';
 export * from './vet';
+export * from './graves';
 
 export const citationSchema = z.object({ sourceId: z.string(), locator: z.string().optional() });
 export const sourceSchema = z.object({

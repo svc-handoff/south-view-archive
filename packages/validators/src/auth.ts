@@ -18,7 +18,7 @@ export function safeCommunityNext(value: string | null | undefined, baseURL?: st
   const url = localTarget(value, baseURL);
   if (
     !url ||
-    !/^\/(?:my-contributions|contribute|admin\/contributions|admin\/(?:people|places)(?:\/[a-zA-Z0-9-]+)?|submissions\/[a-zA-Z0-9-]+)$/.test(
+    !/^\/(?:my-contributions|contribute|admin\/contributions|admin\/(?:people|graves|places)(?:\/[a-zA-Z0-9-]+)?|submissions\/[a-zA-Z0-9-]+)$/.test(
       url.pathname,
     )
   )

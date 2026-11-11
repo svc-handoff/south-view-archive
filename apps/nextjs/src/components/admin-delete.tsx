@@ -150,14 +150,20 @@ export function DeleteRecord({
   );
 }
 
-/** People or places deleted by staff, each restorable with everything deleted with it. */
+/**
+ * People or places deleted by staff, each restorable with everything deleted with it. `only`
+ * keeps the records one list is about, judged by the record as it was before deletion (the
+ * Graves tab lists deleted graves, the Places tab deleted places in Atlanta).
+ */
 export function RecentlyDeleted({
   kind,
   version,
+  only,
   onRestored,
 }: {
   kind: Kind;
   version: number;
+  only?: (previous: Record<string, unknown>) => boolean;
   onRestored: (edits: StaffEdit[], id: string) => void;
 }) {
   const [items, setItems] = useState<StaffEdit[] | null>(null);
@@ -189,13 +195,14 @@ export function RecentlyDeleted({
     void load();
   }
 
-  if (!items?.length && !error) return null;
+  const shown = only ? items?.filter((edit) => only(edit.previous ?? {})) : items;
+  if (!shown?.length && !error) return null;
   return (
     <section className="admin-recently-deleted" aria-labelledby={`deleted-${kind}`}>
       <h4 id={`deleted-${kind}`}>Recently deleted</h4>
       {error && <CommunityNotice kind="error">{error}</CommunityNotice>}
       <ul className="admin-links">
-        {items?.map((edit) => {
+        {shown?.map((edit) => {
           const data = (edit.previous ?? {}) as { name?: string };
           const label =
             kind === 'person'

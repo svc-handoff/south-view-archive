@@ -3,7 +3,7 @@
  */
 import { isDeepStrictEqual } from 'node:util';
 import { staffReasonSchema, type Actor, type StaffEdit } from '@southview/validators';
-import { DomainError, requireReviewer, writableStore } from '../community';
+import { DomainError, checkGraveLinks, requireReviewer, writableStore } from '../community';
 import { revertChange } from '../revert';
 import {
   type Data,
@@ -66,6 +66,8 @@ export async function undoStaffEdit(editId: string, rawReason: string, actor: Ac
       );
     const changes: StaffChange[] = [];
     const undoOf = new Map<string, string>();
+    // Related places an undo puts back on a record, checked once every row is back in place.
+    const graveChecks: { personId: string | null; placeIds: string[] }[] = [];
     for (const row of rows) {
       const current = await readRow(tx, row.target_table, row.target_id);
       let next: Data | null;
@@ -97,8 +99,22 @@ export async function undoStaffEdit(editId: string, rawReason: string, actor: Ac
       }
       changes.push({ table: row.target_table, id: row.target_id, next });
       undoOf.set(`${row.target_table}:${row.target_id}`, row.id);
+      if (next && (row.target_table === 'materials' || row.target_table === 'contributions')) {
+        const before = new Set((current?.placeIds as string[] | undefined) ?? []);
+        const added = ((next.placeIds as string[] | undefined) ?? []).filter(
+          (id) => !before.has(id),
+        );
+        if (added.length)
+          graveChecks.push({
+            personId: (next.personId as string | undefined) ?? null,
+            placeIds: added,
+          });
+      }
     }
     const batchId = await applyStaffChanges(tx, actor, reason, changes, undoOf);
+    // An undo never puts someone else's grave back among a record's related places. Checked
+    // after the rows are written, so a restore that also brings back a burial link passes.
+    for (const check of graveChecks) await checkGraveLinks(tx, check.personId, check.placeIds);
     await tx.query('UPDATE community.staff_edits SET undone_at = now() WHERE batch_id = $1', [
       entry.batch_id,
     ]);
