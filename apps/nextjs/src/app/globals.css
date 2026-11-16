@@ -2556,16 +2556,24 @@ svg {
   margin: 10px 0;
 }
 
+/* Standard scrollbar colors override the sized WebKit scrollbar in Chromium.
+   Reset them here so this track reserves its full, draggable width on macOS too. */
+@supports selector(::-webkit-scrollbar) {
+  .people-results {
+    scrollbar-color: auto;
+  }
+}
 .people-results::-webkit-scrollbar {
-  width: 16px;
+  width: 24px;
 }
 .people-results::-webkit-scrollbar-track {
   background: #eee9df;
 }
 .people-results::-webkit-scrollbar-thumb {
   background: #9b927f;
-  border: 3px solid #eee9df;
-  border-radius: 8px;
+  border: 2px solid #eee9df;
+  border-radius: 12px;
+  min-height: 44px;
 }
 .people-results::-webkit-scrollbar-thumb:hover {
   background: #706650;

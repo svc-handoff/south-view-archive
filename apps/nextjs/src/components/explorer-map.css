@@ -827,6 +827,12 @@
 .map-explorer .detail-panel .detail-resize {
   left: 0;
 }
+/* Reserve a separate resize rail so it cannot intercept the list scrollbar. */
+@media (min-width: 761px) {
+  .map-explorer .people-sidebar {
+    padding-right: 12px;
+  }
+}
 /* The search panel widens from its right edge, on a desktop only. */
 .map-explorer .people-sidebar .sidebar-resize {
   left: auto;
