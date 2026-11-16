@@ -951,7 +951,7 @@
   .community-link-row {
     grid-template-columns: minmax(0, 1fr) auto;
   }
-  .community-link-row input:nth-child(2) {
+  .community-link-row > :nth-child(2) {
     grid-column: 1 / -1;
   }
 }
@@ -1145,4 +1145,17 @@
   margin-top: 14px;
   padding-top: 0;
   border-top: 0;
+}
+
+.community-link-row > .community-field {
+  min-width: 0;
+}
+.community-field.has-error select,
+.community-check.has-error input {
+  outline: 2px solid #9c392e;
+}
+.review-draft-heading {
+  margin-block: 28px 18px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
 }

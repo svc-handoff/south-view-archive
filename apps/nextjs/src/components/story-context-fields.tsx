@@ -1,6 +1,7 @@
 'use client';
 import type { EventDate } from '@southview/validators';
 import type { RecordOption } from '@/lib/record-options';
+import { ValidatedField } from './field-validation';
 import { RecordPicker } from './record-picker';
 import { EventDateFields } from './event-date-fields';
 
@@ -22,16 +23,18 @@ export function StoryContextFields({
 }) {
   return (
     <div className="story-context-fields">
-      <RecordPicker
-        label="Other people in this story (optional)"
-        multiple
-        placeholder="Search names or alternate names…"
-        options={people.filter((person) => person.id !== primaryPersonId)}
-        value={value.relatedPersonIds.filter((key) => key !== primaryPersonId)}
-        onChange={(ids) => onChange({ ...value, relatedPersonIds: ids })}
-      />
+      <ValidatedField as="div" name="relatedPersonIds">
+        <RecordPicker
+          label="Other people in this story (optional)"
+          multiple
+          placeholder="Search names or alternate names…"
+          options={people.filter((person) => person.id !== primaryPersonId)}
+          value={value.relatedPersonIds.filter((key) => key !== primaryPersonId)}
+          onChange={(ids) => onChange({ ...value, relatedPersonIds: ids })}
+        />
+      </ValidatedField>
       {showPlaces && (
-        <div>
+        <ValidatedField as="div" name="placeIds">
           <RecordPicker
             label="Places mentioned (optional)"
             multiple
@@ -44,19 +47,21 @@ export function StoryContextFields({
             Choose places this material is about. Reviewers confirm these links; they do not
             establish a precise location.
           </p>
-        </div>
+        </ValidatedField>
       )}
-      <fieldset>
-        <legend>When did the event or memory take place?</legend>
-        <EventDateFields
-          value={value.eventDate}
-          onChange={(eventDate) => onChange({ ...value, eventDate })}
-        />
-        <p className="community-hint" style={{ marginTop: 10 }}>
-          This is when the story happened, separate from when it is submitted or published. An
-          approximate or unknown date is welcome.
-        </p>
-      </fieldset>
+      <ValidatedField as="div" name="eventDate">
+        <fieldset>
+          <legend>When did the event or memory take place?</legend>
+          <EventDateFields
+            value={value.eventDate}
+            onChange={(eventDate) => onChange({ ...value, eventDate })}
+          />
+          <p className="community-hint" style={{ marginTop: 10 }}>
+            This is when the story happened, separate from when it is submitted or published. An
+            approximate or unknown date is welcome.
+          </p>
+        </fieldset>
+      </ValidatedField>
     </div>
   );
 }

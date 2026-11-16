@@ -90,14 +90,14 @@ test('community lifecycle isolates private originals, verifies ownership, and pu
         assert.equal(snapshot.credits[0]?.id, 'initial-compilation');
         assert.equal(snapshot.contributions.length, 0);
         const versions = await store.query('SELECT version FROM archive.schema_migrations');
-        assert.equal(versions.rows.length, 7);
+        assert.equal(versions.rows.length, 8);
       },
     );
     await t.test(
       'guest receipt is hashed, scoped, persistent and supports safe create retries',
       async () => {
         const receipt = token();
-        const input = original();
+        const input = original({ phone: '+1 (404) 555-0123' });
         const created = await createDraft(input, guest, receipt);
         assert.equal(created.submission.status, 'draft');
         assert.equal(
@@ -130,20 +130,28 @@ test('community lifecycle isolates private originals, verifies ownership, and pu
         ).rows[0]!.input;
         assert.equal(content.email, undefined);
         assert.equal(content.privateName, undefined);
+        assert.equal(content.phone, undefined);
+        assert.equal(created.submission.input.phone, input.phone);
         const contact = (
-          await store.query<{ email: string }>(
-            'SELECT email FROM community.contacts WHERE submission_id=$1',
+          await store.query<{ email: string; phone: string }>(
+            'SELECT email, phone FROM community.contacts WHERE submission_id=$1',
             [created.submission.id],
           )
         ).rows[0]!;
         assert.equal(contact.email, input.email);
+        assert.equal(contact.phone, input.phone);
         const author = { ...guest, receiptToken: receipt };
         const edited = await updateDraft(
           created.submission.id,
-          { ...input, title: 'A corrected draft title' },
+          { ...input, title: 'A corrected draft title', phone: '+1 (404) 555-0199' },
           author,
         );
         assert.equal(edited.input.title, 'A corrected draft title');
+        assert.equal(edited.input.phone, '+1 (404) 555-0199');
+        assert.equal(
+          (await getSubmission(created.submission.id, author)).input.phone,
+          '+1 (404) 555-0199',
+        );
         const attached = photo();
         await attachPhoto(created.submission.id, attached, author);
         await attachPhoto(created.submission.id, attached, author);

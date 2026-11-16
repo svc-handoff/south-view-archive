@@ -34,6 +34,7 @@ export function RecordPicker({
   const [above, setAbove] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [emptyChosen, setEmptyChosen] = useState(false);
   const [page, setPage] = useState(0);
   const [active, setActive] = useState(0);
   const [showAll, setShowAll] = useState(false);
@@ -76,6 +77,7 @@ export function RecordPicker({
     return () => document.removeEventListener('pointerdown', outside);
   }, []);
   function choose(option: RecordOption) {
+    setEmptyChosen(false);
     if (multiple) {
       if (value.includes(option.id)) onChange(value.filter((key) => key !== option.id));
       else if (!maxReached) onChange([...value, option.id]);
@@ -147,7 +149,11 @@ export function RecordPicker({
               open && activeOption ? `${id}-option-${activeOption.id}` : undefined
             }
             placeholder={placeholder}
-            value={open || multiple ? query : (selected[0]?.name ?? '')}
+            value={
+              open || multiple
+                ? query
+                : (selected[0]?.name ?? (emptyChosen ? emptyLabel : '') ?? '')
+            }
             onFocus={() => setOpen(true)}
             onClick={() => setOpen(true)}
             onChange={(event) => {
@@ -191,12 +197,13 @@ export function RecordPicker({
               }
             }}
           />
-          {!multiple && value.length > 0 ? (
+          {!multiple && (value.length > 0 || emptyChosen) ? (
             <button
               type="button"
               aria-label={`Clear ${label.toLowerCase()}`}
               onClick={() => {
                 onChange([]);
+                setEmptyChosen(false);
                 setQuery('');
                 setOpen(false);
               }}
@@ -273,6 +280,7 @@ export function RecordPicker({
                 type="button"
                 onClick={() => {
                   onChange([]);
+                  setEmptyChosen(true);
                   setQuery('');
                   setOpen(false);
                 }}
@@ -286,11 +294,13 @@ export function RecordPicker({
       <p className="record-picker-help" id={`${id}-help`} role="status">
         {multiple
           ? `${selected.length} selected${maxReached ? ' · Selection limit reached' : ''}`
-          : selected.length
-            ? '1 selected'
-            : emptyLabel
-              ? `Search the archive, or choose “${emptyLabel}”.`
-              : 'Search the archive.'}
+          : emptyChosen && !selected.length
+            ? emptyLabel
+            : selected.length
+              ? '1 selected'
+              : emptyLabel
+                ? `Search the archive, or choose “${emptyLabel}”.`
+                : 'Search the archive.'}
         {open && ` · ${matches.length} matching ${matches.length === 1 ? 'record' : 'records'}`}
       </p>
     </div>

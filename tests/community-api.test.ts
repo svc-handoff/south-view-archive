@@ -78,6 +78,7 @@ function draftInput(email = 'visitor@example.org') {
     body: 'This is a privately submitted family memory, awaiting staff review.',
     privateName: 'Private Visitor Name',
     email,
+    phone: '+1 (404) 555-0123',
     anonymous: true,
     displayName: '',
     permission: true,
@@ -457,6 +458,17 @@ test('community HTTP verifies account claims and gates originals, review, public
       .length,
     0,
   );
+  const invalidTitle = await call(`review/${item.id}`, 'POST', { ...publish, title: '' }, other);
+  assert.equal(invalidTitle.status, 400);
+  assert.deepEqual((await invalidTitle.json()).issues[0].path, ['title']);
+  const missingName = await call(
+    `review/${item.id}`,
+    'POST',
+    { ...publish, newPersonName: '' },
+    other,
+  );
+  assert.equal(missingName.status, 400);
+  assert.deepEqual((await missingName.json()).issues[0].path, ['newPersonName']);
   const approved = await call(`review/${item.id}`, 'POST', publish, other);
   assert.equal(approved.status, 200);
   const approvedBody = await approved.json();
@@ -473,6 +485,7 @@ test('community HTTP verifies account claims and gates originals, review, public
   for (const privateValue of [
     item.input.email,
     item.input.privateName,
+    item.input.phone!,
     item.receipt,
     'Private staff deliberation',
     'originals/',

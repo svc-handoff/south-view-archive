@@ -1,3 +1,4 @@
+import type { FieldIssue } from './field-validation';
 import type { SubmissionRecord, SubmissionPhoto } from '@southview/validators';
 export { safeCommunityNext } from '@southview/validators';
 
@@ -11,6 +12,7 @@ export class CommunityRequestError extends Error {
   constructor(
     message: string,
     public status: number,
+    public issues: FieldIssue[] = [],
   ) {
     super(message);
   }
@@ -49,6 +51,18 @@ export async function communityRequest<T>(
         ? result.error
         : 'This request could not be completed.',
       response.status,
+      typeof result === 'object' &&
+      result !== null &&
+      'issues' in result &&
+      Array.isArray(result.issues)
+        ? result.issues.filter(
+            (issue): issue is FieldIssue =>
+              !!issue &&
+              typeof issue === 'object' &&
+              Array.isArray(issue.path) &&
+              typeof issue.message === 'string',
+          )
+        : [],
     );
   return result as T;
 }

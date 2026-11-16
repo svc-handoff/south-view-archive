@@ -15,7 +15,7 @@ export function requireVetReviewer(actor: Actor) {
 }
 /** Review decisions do not invalidate a check; new original material does. */
 export function vetInputRevision(record: SubmissionRecord) {
-  const { privateName, email, clientRequestId, permission, ...input } = record.input;
+  const { privateName, email, phone, clientRequestId, permission, ...input } = record.input;
   return createHash('sha256')
     .update(
       JSON.stringify({

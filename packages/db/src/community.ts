@@ -26,6 +26,7 @@ export class DomainError extends Error {
   constructor(
     public readonly code: 'BAD_REQUEST' | 'NOT_FOUND' | 'FORBIDDEN' | 'CONFLICT' | 'READ_ONLY',
     message: string,
+    public field?: string,
   ) {
     super(message);
     this.name = 'DomainError';
@@ -49,9 +50,9 @@ type ReviewRow = {
   decision: ReviewInput;
   created_at: Date | string;
 };
-const privateSubmissionSelect = `SELECT s.id, s.client_request_id, s.receipt_hash, s.user_id, s.status, s.published_entry_id, s.created_at, s.updated_at, s.input || jsonb_build_object('privateName', c.private_name, 'email', c.email) AS input FROM community.submissions s JOIN community.contacts c ON c.submission_id=s.id`;
+const privateSubmissionSelect = `SELECT s.id, s.client_request_id, s.receipt_hash, s.user_id, s.status, s.published_entry_id, s.created_at, s.updated_at, s.input || jsonb_build_object('privateName', c.private_name, 'email', c.email) || jsonb_strip_nulls(jsonb_build_object('phone', NULLIF(c.phone, ''))) AS input FROM community.submissions s JOIN community.contacts c ON c.submission_id=s.id`;
 function withoutContact(input: SubmissionInput) {
-  const { privateName: _privateName, email: _email, ...content } = input;
+  const { privateName: _privateName, email: _email, phone: _phone, ...content } = input;
   return content;
 }
 const iso = (value: Date | string) => new Date(value).toISOString();
@@ -146,6 +147,7 @@ async function checkPerson(tx: Store, id: string) {
     throw new DomainError(
       'BAD_REQUEST',
       'Select an existing person or create a new person explicitly.',
+      'personId',
     );
   return personSchema.parse(person);
 }
@@ -183,6 +185,7 @@ export async function checkGraveLinks(
     throw new DomainError(
       'BAD_REQUEST',
       `${refused.name} is a grave at South-View, so it can only be a related place of someone buried there.`,
+      'placeIds',
     );
 }
 
@@ -212,6 +215,11 @@ async function checkLinkedRecords(
       throw new DomainError(
         'BAD_REQUEST',
         `A linked ${label} is unavailable. Review the selected archive records.`,
+        table === 'places'
+          ? 'placeIds'
+          : ids.some((id) => id === input.personId && !found.has(id))
+            ? 'personId'
+            : 'relatedPersonIds',
       );
   }
   await checkGraveLinks(tx, input.personId, places);
@@ -237,8 +245,8 @@ export async function createDraft(raw: SubmissionInput, actor: Actor, receiptTok
     );
     if (inserted.rows.length)
       await tx.query(
-        'INSERT INTO community.contacts (submission_id, private_name, email) VALUES ($1,$2,$3)',
-        [id, input.privateName, input.email],
+        'INSERT INTO community.contacts (submission_id, private_name, email, phone) VALUES ($1,$2,$3,$4)',
+        [id, input.privateName, input.email, input.phone ?? ''],
       );
     const row = (
       await tx.query<SubmissionRow>(
@@ -370,8 +378,8 @@ export async function updateDraft(id: string, raw: SubmissionInput, actor: Actor
       [id, JSON.stringify(withoutContact(input))],
     );
     await tx.query(
-      'UPDATE community.contacts SET private_name=$2, email=$3 WHERE submission_id=$1',
-      [id, input.privateName, input.email],
+      'UPDATE community.contacts SET private_name=$2, email=$3, phone=$4 WHERE submission_id=$1',
+      [id, input.privateName, input.email, input.phone ?? ''],
     );
     return recordFor(tx, await rowFor(tx, id, actor), actor);
   });
@@ -614,6 +622,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'Approve the photograph that should become the portrait.',
+        'applyTo',
       );
     portrait = {
       url: chosen.url,
@@ -631,7 +640,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
     // Years and full dates move together; a changed year drops a full date it no longer matches.
     const life: Record<string, unknown> = { ...base };
     const conflict = applyLifeDates(life, patch ?? {});
-    if (conflict) throw new DomainError('BAD_REQUEST', conflict);
+    if (conflict) throw new DomainError('BAD_REQUEST', conflict, 'personPatch.birthYear');
     if (patch?.occupations !== undefined) {
       if (patch.occupations.length) life.occupations = patch.occupations;
       else delete life.occupations;
@@ -660,6 +669,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'A reviewer must explicitly name the new person before publication.',
+        'newPersonName',
       );
     personId = `person-${row.id}`;
     const person = applyPersonPatch(
@@ -700,6 +710,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'Personal memories must remain attributed community entries.',
+        'applyTo',
       );
     const person = await checkPerson(tx, personId);
     const paragraph = {
@@ -717,13 +728,18 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'The paragraph this correction concerns has changed since it was written. Publish it as a community entry, or edit the text to match the current biography.',
+        'applyTo',
       );
     person.biography = placed;
     await saveProjection(tx, row.id, reviewId, 'persons', person);
   }
   if (review.applyTo === 'place') {
     if (input.kind === 'memory')
-      throw new DomainError('BAD_REQUEST', 'A personal memory cannot change a mapped place.');
+      throw new DomainError(
+        'BAD_REQUEST',
+        'A personal memory cannot change a mapped place.',
+        'applyTo',
+      );
     if (!review.placePatch)
       throw new DomainError('BAD_REQUEST', 'Provide the complete place correction.');
     const patch = review.placePatch;
@@ -734,6 +750,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'The location precision must agree with the presence of coordinates.',
+        'placePatch.precision',
       );
     if (
       patch.coordinates &&
@@ -745,6 +762,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
       throw new DomainError(
         'BAD_REQUEST',
         'Place coordinates must be in metropolitan Atlanta, longitude first.',
+        'placePatch.coordinates.0',
       );
     const current = (
       await tx.query<{ data: Record<string, unknown> }>(
@@ -767,6 +785,7 @@ async function publish(tx: Store, row: SubmissionRow, review: ReviewInput, revie
         throw new DomainError(
           'BAD_REQUEST',
           `That grave belongs to ${names}${names.endsWith('.') ? '' : '.'} Choose this person’s grave or a place in Atlanta.`,
+          'placePatch.placeId',
         );
       }
     }

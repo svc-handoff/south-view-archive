@@ -27,9 +27,15 @@ import {
   type SubmissionRecord,
   type VetOverview,
 } from '@southview/validators';
-import { communityRequest, signOutCommunity, type CommunitySession } from '@/lib/community-client';
+import {
+  CommunityRequestError,
+  communityRequest,
+  signOutCommunity,
+  type CommunitySession,
+} from '@/lib/community-client';
 import { displayPersonName } from '@/lib/person-name';
-import { formatReviewIssues } from '@/lib/review-validation';
+import { mapFieldIssues } from '@/lib/field-validation';
+import { FieldValidation, ValidatedField } from './field-validation';
 import {
   filterReviewQueue,
   kindLabels,
@@ -789,6 +795,7 @@ function ReviewEditor({
   const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [tab, setTab] = useState('submission');
   const [confirming, setConfirming] = useState(false);
   const snapshot = JSON.stringify({
@@ -860,24 +867,39 @@ function ReviewEditor({
           };
     });
   }
+  function showFieldErrors(errors: Record<string, string>) {
+    setError('');
+    setFieldErrors(errors);
+    if (
+      Object.keys(errors).some(
+        (key) => !['checked', 'authorMessage', 'internalNote', 'form'].includes(key),
+      )
+    ) {
+      setConfirming(false);
+      setTab('submission');
+    }
+  }
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
     setError('');
     if (readOnly || (record.status === 'published' && action !== 'withdraw')) return;
     if (action === 'publish' && !checked) {
-      setError(
-        'Confirm that you have reviewed the public text, attribution, privacy, and image permissions.',
-      );
+      showFieldErrors({
+        checked:
+          'Confirm that you have reviewed the public text, attribution, privacy, and image permissions.',
+      });
       return;
     }
     if (action !== 'publish' && !draft.authorMessage.trim()) {
-      setError('Include a clear message to the contributor explaining this decision.');
+      showFieldErrors({
+        authorMessage: 'Include a clear message to the contributor explaining this decision.',
+      });
       return;
     }
     // Extra archive sources are optional: publication always cites the contribution itself.
     if (action === 'publish' && applyTo === 'portrait' && photoIds.length === 0) {
-      setError('Approve the photograph that should become the portrait.');
+      showFieldErrors({ applyTo: 'Approve the photograph that should become the portrait.' });
       return;
     }
     if (
@@ -886,7 +908,16 @@ function ReviewEditor({
         (year) => year.trim() && !/^\d{1,4}$/.test(year.trim()),
       )
     ) {
-      setError('Enter birth and death years as years, or leave them blank.');
+      showFieldErrors(
+        Object.fromEntries(
+          ['birthYear', 'deathYear']
+            .filter((key) => {
+              const year = personFields[key as 'birthYear' | 'deathYear'];
+              return year.trim() && !/^\d{1,4}$/.test(year.trim());
+            })
+            .map((key) => [`personPatch.${key}`, 'Enter a year, or leave this field blank.']),
+        ),
+      );
       return;
     }
     if (
@@ -895,13 +926,21 @@ function ReviewEditor({
       place.precision !== 'unmapped' &&
       (!place.lng.trim() || !place.lat.trim())
     ) {
-      setError('Supply both longitude and latitude, or choose Not yet mapped.');
+      showFieldErrors({
+        ...(!place.lng.trim()
+          ? { 'placePatch.coordinates.0': 'Enter longitude, or choose Not yet mapped.' }
+          : {}),
+        ...(!place.lat.trim()
+          ? { 'placePatch.coordinates.1': 'Enter latitude, or choose Not yet mapped.' }
+          : {}),
+      });
       return;
     }
     if (action === 'publish' && applyTo === 'place' && !place.scope) {
-      setError(
-        'Choose whether the new place is where this person is buried at South-View, or a place in Atlanta.',
-      );
+      showFieldErrors({
+        'placePatch.scope':
+          'Choose whether this is their grave at South-View or a place in Atlanta.',
+      });
       return;
     }
     const payload: ReviewInput =
@@ -943,16 +982,19 @@ function ReviewEditor({
           };
     const parsed = reviewInputSchema.safeParse(payload);
     if (!parsed.success) {
-      setError(
-        formatReviewIssues(
+      const fields = [
+        ...document.querySelectorAll<HTMLElement>('.review-editor [data-validation-field]'),
+      ].map((field) => field.dataset.validationField!);
+      showFieldErrors(
+        mapFieldIssues(
           parsed.error.issues,
-          payload.photoEdits?.map(
-            (photo) => record.photos.findIndex((original) => original.id === photo.id) + 1,
-          ),
+          fields,
+          payload.photoEdits?.map((photo) => photo.id),
         ),
       );
       return;
     }
+    setFieldErrors({});
     setBusy(true);
     try {
       const result = await communityRequest<{ submission: SubmissionRecord }>(
@@ -963,11 +1005,24 @@ function ReviewEditor({
       setConfirming(false);
       onReviewed(result.submission);
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : 'This review could not be saved. Your edits are still here.',
-      );
+      if (failure instanceof CommunityRequestError && failure.issues.length) {
+        const fields = [
+          ...document.querySelectorAll<HTMLElement>('.review-editor [data-validation-field]'),
+        ].map((field) => field.dataset.validationField!);
+        showFieldErrors(
+          mapFieldIssues(
+            failure.issues,
+            fields,
+            payload.photoEdits?.map((photo) => photo.id),
+          ),
+        );
+      } else {
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : 'This review could not be saved. Your edits are still here.',
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -975,7 +1030,18 @@ function ReviewEditor({
   const editable = !readOnly && record.status !== 'published';
   const credit = record.input.anonymous ? 'Anonymous contributor' : record.input.displayName;
   return (
-    <section className="review-editor" aria-label="Review selected contribution">
+    <FieldValidation
+      errors={fieldErrors}
+      onFieldChange={(name) =>
+        setFieldErrors((previous) =>
+          Object.fromEntries(
+            Object.entries(previous).filter(([key]) => key !== name && !key.startsWith(`${name}.`)),
+          ),
+        )
+      }
+      className="review-editor"
+      aria-label="Review selected contribution"
+    >
       <header className="review-detail-heading">
         <div className="review-row-meta">
           <span className="community-status" data-status={record.status}>
@@ -1003,8 +1069,7 @@ function ReviewEditor({
         <VetPanel state={vet} onRun={onVet} canRun={canVet && !busy} />
         <div className="review-tabs" role="tablist" aria-label="Submission details">
           {[
-            ['submission', 'Submission'],
-            ['draft', 'Public draft'],
+            ['submission', 'Submission & public draft'],
             ['history', 'History'],
           ].map(([id, label], index, tabs) => (
             <button
@@ -1039,23 +1104,7 @@ function ReviewEditor({
           hidden={tab !== 'submission'}
         >
           <OriginalSubmission record={record} archive={archive} />
-        </div>
-        <div
-          role="tabpanel"
-          id="review-panel-history"
-          aria-labelledby="review-tab-history"
-          tabIndex={0}
-          hidden={tab !== 'history'}
-        >
-          <ReviewHistory record={record} />
-        </div>
-        <div
-          role="tabpanel"
-          id="review-panel-draft"
-          aria-labelledby="review-tab-draft"
-          tabIndex={0}
-          hidden={tab !== 'draft'}
-        >
+          <h3 className="review-draft-heading">Public draft</h3>
           {!editable ? (
             <CommunityNotice
               title={
@@ -1105,16 +1154,19 @@ function ReviewEditor({
               <p className="review-credit">
                 Public credit: <strong>{credit}</strong> — {draft.title}
               </p>
-              <RecordPicker
-                label="Person record"
-                options={archive.people}
-                value={draft.personId ? [draft.personId] : []}
-                onChange={(ids) => choosePerson(ids[0] ?? '')}
-                placeholder="Search names or alternate names…"
-                emptyLabel="Create a new person record"
-              />
+              <ValidatedField as="div" name="personId">
+                {' '}
+                <RecordPicker
+                  label="Person record"
+                  options={archive.people}
+                  value={draft.personId ? [draft.personId] : []}
+                  onChange={(ids) => choosePerson(ids[0] ?? '')}
+                  placeholder="Search names or alternate names…"
+                  emptyLabel="Create a new person record"
+                />
+              </ValidatedField>
               {!draft.personId && (
-                <label className="community-field">
+                <ValidatedField name={'newPersonName'} className="community-field">
                   <span>New person’s public name</span>
                   <input
                     required
@@ -1122,7 +1174,7 @@ function ReviewEditor({
                     onChange={(event) => edit('newPersonName', event.target.value)}
                     maxLength={160}
                   />
-                </label>
+                </ValidatedField>
               )}
               <details className="story-context-details">
                 <summary>
@@ -1135,25 +1187,25 @@ function ReviewEditor({
                 </summary>
                 <div className="community-fields">
                   {draft.personId && (
-                    <label className="community-field">
+                    <ValidatedField name={'personPatch.name'} className="community-field">
                       <span>Public name</span>
                       <input
                         value={personFields.name}
                         onChange={(event) => editPerson('name', event.target.value)}
                         maxLength={160}
                       />
-                    </label>
+                    </ValidatedField>
                   )}
-                  <label className="community-field">
+                  <ValidatedField name={'personPatch.aliases'} className="community-field">
                     <span>Other names</span>
                     <input
                       value={personFields.aliases}
                       onChange={(event) => editPerson('aliases', event.target.value)}
                       placeholder="Separate names with commas"
                     />
-                  </label>
+                  </ValidatedField>
                   <div className="community-two-columns">
-                    <label className="community-field">
+                    <ValidatedField name={'personPatch.birthYear'} className="community-field">
                       <span>Birth year</span>
                       <input
                         inputMode="numeric"
@@ -1162,8 +1214,8 @@ function ReviewEditor({
                         placeholder="Unknown"
                         maxLength={4}
                       />
-                    </label>
-                    <label className="community-field">
+                    </ValidatedField>
+                    <ValidatedField name={'personPatch.deathYear'} className="community-field">
                       <span>Death year</span>
                       <input
                         inputMode="numeric"
@@ -1172,9 +1224,9 @@ function ReviewEditor({
                         placeholder="Unknown"
                         maxLength={4}
                       />
-                    </label>
+                    </ValidatedField>
                   </div>
-                  <label className="community-field">
+                  <ValidatedField name={'personPatch.occupations'} className="community-field">
                     <span>Occupations</span>
                     <input
                       value={personFields.occupations}
@@ -1184,8 +1236,8 @@ function ReviewEditor({
                     {!draft.personId && record.input.proposedOccupation && (
                       <small>Suggested by the contributor: {record.input.proposedOccupation}</small>
                     )}
-                  </label>
-                  <label className="community-field">
+                  </ValidatedField>
+                  <ValidatedField name={'personPatch.themes'} className="community-field">
                     <span>Themes</span>
                     <input
                       value={personFields.themes}
@@ -1193,8 +1245,8 @@ function ReviewEditor({
                       placeholder="Separate themes with commas"
                     />
                     <small>In use: {themeOptions.join(', ')}</small>
-                  </label>
-                  <label className="community-field">
+                  </ValidatedField>
+                  <ValidatedField name={'personPatch.summary'} className="community-field">
                     <span>Summary</span>
                     <textarea
                       rows={3}
@@ -1211,10 +1263,10 @@ function ReviewEditor({
                       A changed summary cites this contribution. Everything here goes live with the
                       publication and can be withdrawn with it.
                     </small>
-                  </label>
+                  </ValidatedField>
                 </div>
               </details>
-              <label className="community-field">
+              <ValidatedField name={'title'} className="community-field">
                 <span>Public title</span>
                 <input
                   required
@@ -1223,7 +1275,7 @@ function ReviewEditor({
                   value={draft.title}
                   onChange={(event) => edit('title', event.target.value)}
                 />
-              </label>
+              </ValidatedField>
               <details className="story-context-details">
                 <summary>Confirm people, places, and event date</summary>
                 <StoryContextFields
@@ -1237,7 +1289,7 @@ function ReviewEditor({
                   }}
                 />
               </details>
-              <label className="community-field">
+              <ValidatedField name={'body'} className="community-field">
                 <span>Public text</span>
                 <textarea
                   required
@@ -1251,8 +1303,8 @@ function ReviewEditor({
                   Remove private contact details and preserve the contributor’s meaning. The
                   original submission remains in the review record.
                 </small>
-              </label>
-              <label className="community-field">
+              </ValidatedField>
+              <ValidatedField name={'context'} className="community-field">
                 <span>Public context</span>
                 <textarea
                   maxLength={4000}
@@ -1260,33 +1312,33 @@ function ReviewEditor({
                   value={draft.context}
                   onChange={(event) => edit('context', event.target.value)}
                 />
-              </label>
+              </ValidatedField>
               <div className="community-two-columns">
-                <label className="community-field">
+                <ValidatedField name={'sourceCreator'} className="community-field">
                   <span>Original author or creator</span>
                   <input
                     maxLength={200}
                     value={draft.sourceCreator}
                     onChange={(event) => edit('sourceCreator', event.target.value)}
                   />
-                </label>
-                <label className="community-field">
+                </ValidatedField>
+                <ValidatedField name={'narrator'} className="community-field">
                   <span>Narrator</span>
                   <input
                     maxLength={200}
                     value={draft.narrator}
                     onChange={(event) => edit('narrator', event.target.value)}
                   />
-                </label>
+                </ValidatedField>
               </div>
-              <label className="community-field">
+              <ValidatedField name={'holdingInstitution'} className="community-field">
                 <span>Holding institution or collection</span>
                 <input
                   maxLength={200}
                   value={draft.holdingInstitution}
                   onChange={(event) => edit('holdingInstitution', event.target.value)}
                 />
-              </label>
+              </ValidatedField>
               {record.photos.length > 0 && (
                 <section className="community-section">
                   <h3>Photographs for publication</h3>
@@ -1327,7 +1379,10 @@ function ReviewEditor({
                         </div>
                         {photoIds.includes(photo.id) && (
                           <div className="community-fields">
-                            <label className="community-field">
+                            <ValidatedField
+                              name={`photoEdits.${photo.id}.caption`}
+                              className="community-field"
+                            >
                               <span>Public caption</span>
                               <input
                                 required
@@ -1335,8 +1390,11 @@ function ReviewEditor({
                                 value={edited.caption}
                                 onChange={(event) => update('caption', event.target.value)}
                               />
-                            </label>
-                            <label className="community-field">
+                            </ValidatedField>
+                            <ValidatedField
+                              name={`photoEdits.${photo.id}.creator`}
+                              className="community-field"
+                            >
                               <span>Creator</span>
                               <input
                                 required
@@ -1344,8 +1402,11 @@ function ReviewEditor({
                                 value={edited.creator}
                                 onChange={(event) => update('creator', event.target.value)}
                               />
-                            </label>
-                            <label className="community-field">
+                            </ValidatedField>
+                            <ValidatedField
+                              name={`photoEdits.${photo.id}.rights`}
+                              className="community-field"
+                            >
                               <span>Rights and use conditions</span>
                               <input
                                 required
@@ -1353,7 +1414,7 @@ function ReviewEditor({
                                 value={edited.rights}
                                 onChange={(event) => update('rights', event.target.value)}
                               />
-                            </label>
+                            </ValidatedField>
                           </div>
                         )}
                       </div>
@@ -1361,7 +1422,7 @@ function ReviewEditor({
                   })}
                 </section>
               )}
-              <label className="community-field">
+              <ValidatedField name={'applyTo'} className="community-field">
                 <span>Where should the approved content appear?</span>
                 <select
                   value={applyTo}
@@ -1386,12 +1447,14 @@ function ReviewEditor({
                     page; the entry keeps every approved photograph.
                   </small>
                 )}
-              </label>
+              </ValidatedField>
               <details open={applyTo !== 'entry'}>
                 <summary className="community-text-button">
                   Add supporting archive sources, optional ({sourceIds.length})
                 </summary>
-                <div
+                <ValidatedField
+                  as="div"
+                  name="sourceIds"
                   className="community-fields"
                   style={{ maxHeight: 300, overflow: 'auto', padding: '10px 3px' }}
                 >
@@ -1415,13 +1478,13 @@ function ReviewEditor({
                       </span>
                     </label>
                   ))}
-                </div>
+                </ValidatedField>
               </details>
               {applyTo === 'place' && (
                 <section className="community-section">
                   <h3>Map place update</h3>
                   <div className="community-fields" style={{ marginTop: 18 }}>
-                    <label className="community-field">
+                    <ValidatedField name={'placePatch.placeId'} className="community-field">
                       <span>Existing place or new place</span>
                       <select
                         value={place.id}
@@ -1459,8 +1522,8 @@ function ReviewEditor({
                           Atlanta, or a new place.
                         </small>
                       )}
-                    </label>
-                    <label className="community-field">
+                    </ValidatedField>
+                    <ValidatedField name={'placePatch.name'} className="community-field">
                       <span>Place name</span>
                       <input
                         required
@@ -1469,8 +1532,8 @@ function ReviewEditor({
                           setPlace((previous) => ({ ...previous, name: event.target.value }))
                         }
                       />
-                    </label>
-                    <label className="community-field">
+                    </ValidatedField>
+                    <ValidatedField name={'placePatch.summary'} className="community-field">
                       <span>About this place (public)</span>
                       <textarea
                         value={place.summary}
@@ -1481,9 +1544,9 @@ function ReviewEditor({
                           setPlace((previous) => ({ ...previous, summary: event.target.value }))
                         }
                       />
-                    </label>
+                    </ValidatedField>
                     <div className="community-two-columns">
-                      <label className="community-field">
+                      <ValidatedField name={'placePatch.scope'} className="community-field">
                         <span>Area</span>
                         <select
                           value={place.scope}
@@ -1508,8 +1571,8 @@ function ReviewEditor({
                         ) : (
                           <small>A grave is where this person is buried.</small>
                         )}
-                      </label>
-                      <label className="community-field">
+                      </ValidatedField>
+                      <ValidatedField name={'placePatch.precision'} className="community-field">
                         <span>Position precision</span>
                         <select
                           value={place.precision}
@@ -1525,11 +1588,14 @@ function ReviewEditor({
                           <option value="address">Address position</option>
                           <option value="verified">Independently verified position</option>
                         </select>
-                      </label>
+                      </ValidatedField>
                     </div>
                     {place.precision !== 'unmapped' && (
                       <div className="community-two-columns">
-                        <label className="community-field">
+                        <ValidatedField
+                          name={'placePatch.coordinates.0'}
+                          className="community-field"
+                        >
                           <span>Longitude</span>
                           <input
                             required
@@ -1542,8 +1608,11 @@ function ReviewEditor({
                               setPlace((previous) => ({ ...previous, lng: event.target.value }))
                             }
                           />
-                        </label>
-                        <label className="community-field">
+                        </ValidatedField>
+                        <ValidatedField
+                          name={'placePatch.coordinates.1'}
+                          className="community-field"
+                        >
                           <span>Latitude</span>
                           <input
                             required
@@ -1556,10 +1625,10 @@ function ReviewEditor({
                               setPlace((previous) => ({ ...previous, lat: event.target.value }))
                             }
                           />
-                        </label>
+                        </ValidatedField>
                       </div>
                     )}
-                    <label className="community-field">
+                    <ValidatedField name={'placePatch.locationNote'} className="community-field">
                       <span>Location evidence and limits</span>
                       <textarea
                         required
@@ -1569,8 +1638,8 @@ function ReviewEditor({
                         }
                         rows={3}
                       />
-                    </label>
-                    <label className="community-field">
+                    </ValidatedField>
+                    <ValidatedField name={'placePatch.relationship'} className="community-field">
                       <span>Person’s relationship to this place</span>
                       <textarea
                         required
@@ -1583,11 +1652,11 @@ function ReviewEditor({
                         }
                         rows={3}
                       />
-                    </label>
+                    </ValidatedField>
                   </div>
                 </section>
               )}
-              <label className="community-field">
+              <ValidatedField name={'publicNote'} className="community-field">
                 <span>Public editorial note</span>
                 <textarea
                   maxLength={3000}
@@ -1596,9 +1665,18 @@ function ReviewEditor({
                   onChange={(event) => edit('publicNote', event.target.value)}
                   placeholder="Context readers should see, including limitations or a correction explanation."
                 />
-              </label>
+              </ValidatedField>
             </div>
           )}
+        </div>
+        <div
+          role="tabpanel"
+          id="review-panel-history"
+          aria-labelledby="review-tab-history"
+          tabIndex={0}
+          hidden={tab !== 'history'}
+        >
+          <ReviewHistory record={record} />
         </div>
       </div>
       {confirming && (
@@ -1616,7 +1694,6 @@ function ReviewEditor({
           onClose={() => setConfirming(false)}
         >
           <form className="community-fields" onSubmit={submit} noValidate>
-            {error && <CommunityNotice kind="error">{error}</CommunityNotice>}
             {action === 'publish' && (
               <section className="review-public-preview">
                 <p className="community-preview-label">
@@ -1720,7 +1797,7 @@ function ReviewEditor({
                   disabled={busy}
                   onClick={() => {
                     setConfirming(false);
-                    setTab('draft');
+                    setTab('submission');
                   }}
                 >
                   Edit public draft
@@ -1736,7 +1813,7 @@ function ReviewEditor({
                     : 'The contributor is not emailed. They see this message the next time they open their private receipt page or account, and the submission returns to review when they reply.'}
               </p>
             )}
-            <label className="community-field">
+            <ValidatedField name={'authorMessage'} className="community-field">
               <span>Message to the contributor {action !== 'publish' && '*'}</span>
               <textarea
                 required={action !== 'publish'}
@@ -1747,8 +1824,8 @@ function ReviewEditor({
                 placeholder="Explain your decision and any information that would help."
               />
               <small>Shown only on the contributor’s private receipt page; no email is sent.</small>
-            </label>
-            <label className="community-field">
+            </ValidatedField>
+            <ValidatedField name={'internalNote'} className="community-field">
               <span>Internal review note</span>
               <textarea
                 maxLength={5000}
@@ -1757,10 +1834,10 @@ function ReviewEditor({
                 onChange={(event) => edit('internalNote', event.target.value)}
               />
               <small>Visible only to authorized reviewers.</small>
-            </label>
+            </ValidatedField>
 
             {action === 'publish' && (
-              <label className="community-check">
+              <ValidatedField name={'checked'} className="community-check">
                 <input
                   type="checkbox"
                   checked={checked}
@@ -1770,8 +1847,12 @@ function ReviewEditor({
                   I have checked the public text, contributor credit, personal information, sources,
                   and photograph permissions.
                 </span>
-              </label>
+              </ValidatedField>
             )}
+            {error && <CommunityNotice kind="error">{error}</CommunityNotice>}
+            <ValidatedField as="div" name="form" className="community-form-error">
+              {null}
+            </ValidatedField>
             <div className="review-dialog-actions">
               <button
                 className="community-secondary"
@@ -1807,6 +1888,6 @@ function ReviewEditor({
           </form>
         </ReviewDialog>
       )}
-    </section>
+    </FieldValidation>
   );
 }

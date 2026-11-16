@@ -120,6 +120,12 @@ export const submissionInputSchema = z
     email: z
       .email({ error: 'Enter a valid email address.' })
       .transform((value) => value.trim().toLowerCase()),
+    phone: z
+      .string()
+      .trim()
+      .max(50, 'Enter a phone number of no more than 50 characters.')
+      .transform((value) => value || undefined)
+      .optional(),
     anonymous: z.boolean(),
     displayName: z.string().trim().max(160).default(''),
     permission: z.literal(true),

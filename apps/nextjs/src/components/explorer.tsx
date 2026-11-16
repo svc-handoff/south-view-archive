@@ -113,7 +113,7 @@ export function Explorer({ archive }: { archive: ArchiveData }) {
   const [previewTarget, setPreviewTarget] = useState<PreviewTarget | null>(null);
   const [resetEpoch, setResetEpoch] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [alphabetical, setAlphabetical] = useState(false);
+  const [alphabetical, setAlphabetical] = useState(true);
   const detailRef = useRef<HTMLElement>(null);
   const detailScrollRef = useRef<HTMLDivElement>(null);
   const detailResize = useDetailResize();
@@ -531,7 +531,7 @@ export function Explorer({ archive }: { archive: ArchiveData }) {
                   <input
                     id="archive-search"
                     type="search"
-                    placeholder="Search the archive"
+                    placeholder="Search"
                     aria-label="Search people, places, or stories"
                     value={state.q}
                     onChange={(e) => {

@@ -69,7 +69,7 @@ export function researchURL(value: string): string | null {
 export function prepareVetText(record: SubmissionRecord, archive: ArchiveData) {
   const input = record.input;
   const containsContact = (text: string) =>
-    [input.email, input.privateName].some(
+    [input.email, input.privateName, input.phone].some(
       (value) => value && text.toLowerCase().includes(value.toLowerCase()),
     );
   const publicLink = (value: string) => {
@@ -81,7 +81,7 @@ export function prepareVetText(record: SubmissionRecord, archive: ArchiveData) {
     return researchURL(value);
   };
   const redact = (text: string) => {
-    for (const value of [input.email, input.privateName]) {
+    for (const value of [input.email, input.privateName, input.phone]) {
       if (value)
         text = text.replace(
           new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),

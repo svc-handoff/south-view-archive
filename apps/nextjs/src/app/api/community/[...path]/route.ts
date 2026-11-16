@@ -588,7 +588,16 @@ async function handle(request: Request, context: Context): Promise<Response> {
   } catch (error) {
     if (error instanceof HttpError) return json({ error: error.message }, error.status);
     if (error instanceof ZodError)
-      return json({ error: error.issues[0]?.message ?? 'Please check the form.' }, 400);
+      return json(
+        {
+          error: error.issues[0]?.message ?? 'Please check the form.',
+          issues: error.issues.map(({ path, message }) => ({
+            path: path[0] === 'input' ? path.slice(1) : path,
+            message,
+          })),
+        },
+        400,
+      );
     if (error instanceof InvalidPhotoError) return json({ error: error.message }, 400);
     const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
     const statuses: Record<string, number> = {
@@ -603,6 +612,9 @@ async function handle(request: Request, context: Context): Promise<Response> {
     if (statuses[code])
       return json(
         {
+          ...(error instanceof repository.DomainError && error.field
+            ? { issues: [{ path: error.field.split('.'), message: error.message }] }
+            : {}),
           error:
             code === 'NOT_FOUND'
               ? error instanceof Error && error.message

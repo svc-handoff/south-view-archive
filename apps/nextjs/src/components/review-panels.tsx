@@ -542,6 +542,12 @@ export function OriginalSubmission({
             <dt>Email</dt>
             <dd>{record.input.email}</dd>
           </div>
+          {record.input.phone && (
+            <div>
+              <dt>Phone number</dt>
+              <dd>{record.input.phone}</dd>
+            </div>
+          )}
         </dl>
         <p className="community-hint">
           These details are separate from the public contributor credit.

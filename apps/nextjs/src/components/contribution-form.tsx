@@ -24,6 +24,8 @@ import {
   type SubmissionRecord,
   type PhotoMetadata,
 } from '@southview/validators';
+import { FieldValidation, ValidatedField } from './field-validation';
+import { mapFieldIssues } from '@/lib/field-validation';
 import { CommunityNotice } from './community-shell';
 import { StoryContextFields } from './story-context-fields';
 import { RecordPicker } from './record-picker';
@@ -32,6 +34,7 @@ import type { RecordOption } from '@/lib/record-options';
 import { restoreDraftEventDate } from '@/lib/story-context';
 import { copy } from '@/lib/copy';
 import {
+  CommunityRequestError,
   communityRequest,
   uploadCommunityPhoto,
   privatePhotoUrl,
@@ -190,6 +193,7 @@ export function ContributionForm({
     : [];
   const [privateName, setPrivateName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [permission, setPermission] = useState(false);
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [phase, setPhase] = useState<'write' | 'preview' | 'sending'>('write');
@@ -410,13 +414,6 @@ export function ContributionForm({
     setDraftSaved(false);
     if (fieldErrors[key]) setFieldErrors(({ [key]: _cleared, ...rest }) => rest);
   }
-  const fieldClass = (name: string) => `community-field${fieldErrors[name] ? ' has-error' : ''}`;
-  const FieldError = ({ name }: { name: string }) =>
-    fieldErrors[name] ? (
-      <small className="community-field-error" role="alert">
-        {fieldErrors[name]}
-      </small>
-    ) : null;
   function inputValue(): SubmissionInput {
     return {
       ...draft,
@@ -426,9 +423,13 @@ export function ContributionForm({
       proposedOccupation: draft.personId ? '' : draft.proposedOccupation,
       privateName,
       email: email.trim(),
+      phone: phone.trim(),
       permission: true,
       links: draft.links
-        .map((link) => ({ title: link.title.trim() || link.url.trim(), url: link.url.trim() }))
+        .map((link) => ({
+          title: link.title.trim() || link.url.trim(),
+          url: link.url.trim(),
+        }))
         .filter((link) => link.url),
       placement:
         draft.placeName.trim() || draft.placeCoordinates
@@ -442,37 +443,87 @@ export function ContributionForm({
           : undefined,
     };
   }
+  function showFieldErrors(errors: Record<string, string>) {
+    setError('');
+    setFieldErrors(errors);
+    if (
+      Object.keys(errors).some(
+        (key) => key === 'sourceCreator' || key === 'holdingInstitution' || key.startsWith('links'),
+      )
+    )
+      setSourceKind('document');
+    else if (errors.narrator) setSourceKind('account');
+    setPhase('write');
+  }
   function validate() {
-    if (photos.length > 5) {
-      setError('Choose no more than five photographs, including any recovered from your draft.');
-      return null;
-    }
+    const errors: Record<string, string> = {};
+    if (photos.length > 5)
+      errors.photos =
+        'Choose no more than five photographs, including any recovered from your draft.';
     const result = submissionInputSchema.safeParse(inputValue());
-    if (!result.success) {
-      const errors: Record<string, string> = {};
-      for (const issue of result.error.issues) {
-        const key = String(issue.path[0] ?? 'form');
-        errors[key] ??= issue.message;
+    if (!result.success)
+      Object.assign(
+        errors,
+        mapFieldIssues(
+          result.error.issues.map((issue) =>
+            issue.path[0] === 'links' && typeof issue.path[1] === 'number'
+              ? {
+                  ...issue,
+                  path: [
+                    'links',
+                    draft.links.flatMap((link, index) => (link.url.trim() ? [index] : []))[
+                      issue.path[1]
+                    ]!,
+                    ...issue.path.slice(2),
+                  ],
+                }
+              : issue,
+          ),
+          [
+            'proposedPersonName',
+            'proposedOccupation',
+            'title',
+            'body',
+            'context',
+            'sourceCreator',
+            'narrator',
+            'holdingInstitution',
+            'links',
+            'privateName',
+            'email',
+            'phone',
+            'displayName',
+            'eventDate',
+            'placeName',
+          ].concat(
+            draft.links.flatMap((_, index) => [`links.${index}.title`, `links.${index}.url`]),
+          ),
+        ),
+      );
+    for (const [index, photo] of photos.entries()) {
+      const checked = photoMetadataSchema.safeParse(photo.metadata);
+      if (!checked.success) {
+        for (const issue of checked.error.issues)
+          errors[`photos.${index}.${String(issue.path[0])}`] ??=
+            issue.path[0] === 'permission'
+              ? 'Confirm permission to display this photograph.'
+              : `Complete the ${String(issue.path[0])} for ${photo.name}.`;
       }
-      setFieldErrors(errors);
-      setError('Please check the highlighted fields below.');
+    }
+    if (Object.keys(errors).length) {
+      showFieldErrors(errors);
       return null;
     }
     setFieldErrors({});
-    for (const photo of photos) {
-      const checked = photoMetadataSchema.safeParse(photo.metadata);
-      if (!checked.success) {
-        setError(`Please complete the caption, creator, rights, and permission for ${photo.name}.`);
-        return null;
-      }
-    }
-    return result.data;
+    return result.success ? result.data : null;
   }
   function addPhotos(files: FileList | null) {
     if (!files) return;
     const selected = [...files];
     if (photos.length + selected.length > 5) {
-      setError('You can include up to five photographs. Remove one before adding another.');
+      showFieldErrors({
+        photos: 'You can include up to five photographs. Remove one before adding another.',
+      });
       return;
     }
     const invalid = selected.find(
@@ -481,9 +532,9 @@ export function ContributionForm({
         file.size > 10 * 1024 * 1024,
     );
     if (invalid) {
-      setError(
-        `${invalid.name} could not be added. Choose JPEG, PNG, or WebP files of 10 MB or less. Your other photographs and text are still here.`,
-      );
+      showFieldErrors({
+        photos: `${invalid.name} could not be added. Choose JPEG, PNG, or WebP files of 10 MB or less. Your other photographs and text are still here.`,
+      });
       return;
     }
     setError('');
@@ -555,9 +606,9 @@ export function ContributionForm({
       return;
     }
     if (!permission) {
-      setError(
-        'Please confirm that reviewers may review this contribution and publish it with your chosen credit.',
-      );
+      setFieldErrors({
+        permission: 'Please confirm permission to review and publish your contribution.',
+      });
       return;
     }
     setPhase('sending');
@@ -641,12 +692,35 @@ export function ContributionForm({
       }
       window.location.assign(submissionReceiptUrl(created.id, draft.receiptToken));
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : 'We could not send your contribution. Your text and photographs are still here; please try again.',
-      );
-      setPhase('preview');
+      if (failure instanceof CommunityRequestError && failure.issues.length) {
+        const fields = [
+          'personId',
+          'proposedPersonName',
+          'title',
+          'body',
+          'context',
+          'sourceCreator',
+          'narrator',
+          'holdingInstitution',
+          'links',
+          'privateName',
+          'email',
+          'phone',
+          'displayName',
+          'eventDate',
+          'placeIds',
+          'relatedPersonIds',
+          'placeName',
+        ];
+        showFieldErrors(mapFieldIssues(failure.issues, fields));
+      } else {
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : 'We could not send your contribution. Your text and photographs are still here; please try again.',
+        );
+        setPhase('preview');
+      }
     }
   }
 
@@ -657,15 +731,18 @@ export function ContributionForm({
     draft.personId ? `/contribute?person=${encodeURIComponent(draft.personId)}` : '/contribute',
   );
   return (
-    <div className="community-grid">
+    <FieldValidation
+      errors={fieldErrors}
+      onFieldChange={(name) =>
+        setFieldErrors((previous) =>
+          Object.fromEntries(
+            Object.entries(previous).filter(([key]) => key !== name && !key.startsWith(`${name}.`)),
+          ),
+        )
+      }
+      className="community-grid"
+    >
       <div>
-        <div ref={errorRef} tabIndex={-1}>
-          {error && (
-            <CommunityNotice kind="error" title="Your contribution has not been submitted">
-              {error}
-            </CommunityNotice>
-          )}
-        </div>
         {session?.mode === 'fixture' && (
           <CommunityNotice title="This archive is in read-only mode">
             You can prepare your story here, but submissions are not available until contribution
@@ -697,6 +774,16 @@ export function ContributionForm({
               Your saved photographs could not be displayed. Sending is paused so no image is
               included without appearing in your preview.
             </p>
+            <div ref={errorRef} tabIndex={-1}>
+              {error && (
+                <CommunityNotice kind="error" title="Your contribution has not been submitted">
+                  {error}
+                </CommunityNotice>
+              )}
+            </div>
+            <ValidatedField as="div" name="form" className="community-form-error">
+              {null}
+            </ValidatedField>
             <div className="community-actions">
               <button
                 className="community-secondary"
@@ -722,26 +809,28 @@ export function ContributionForm({
                 <h2>Who are you adding, and what do you know?</h2>
               </div>
               <div className="community-fields">
-                <RecordPicker
-                  label="Who is this about?"
-                  options={people}
-                  value={draft.personId ? [draft.personId] : []}
-                  onChange={(ids) => {
-                    const personId = ids[0] ?? '';
-                    change('personId', personId);
-                    change('placeIds', []);
-                    // Keep the address bar honest so a reload or a shared link opens the same person.
-                    window.history.replaceState(
-                      null,
-                      '',
-                      personId
-                        ? `/contribute?person=${encodeURIComponent(personId)}`
-                        : '/contribute',
-                    );
-                  }}
-                  placeholder="Search names or alternate names…"
-                  emptyLabel="Someone not listed here"
-                />
+                <ValidatedField as="div" name="personId">
+                  <RecordPicker
+                    label="Who is this about?"
+                    options={people}
+                    value={draft.personId ? [draft.personId] : []}
+                    onChange={(ids) => {
+                      const personId = ids[0] ?? '';
+                      change('personId', personId);
+                      change('placeIds', []);
+                      // Keep the address bar honest so a reload or a shared link opens the same person.
+                      window.history.replaceState(
+                        null,
+                        '',
+                        personId
+                          ? `/contribute?person=${encodeURIComponent(personId)}`
+                          : '/contribute',
+                      );
+                    }}
+                    placeholder="Search names or alternate names…"
+                    emptyLabel="Someone not listed"
+                  />
+                </ValidatedField>
                 {draft.personId ? (
                   <p className="community-hint community-person-hint">
                     Everything you add here is reviewed and then shown on {personName}’s page. You
@@ -752,7 +841,7 @@ export function ContributionForm({
                     , next to the paragraph or place it belongs to.
                   </p>
                 ) : (
-                  <label className={fieldClass('proposedPersonName')}>
+                  <ValidatedField name={'proposedPersonName'}>
                     <span>
                       Their name, if they are not in the archive yet{' '}
                       <span className="community-required">*</span>
@@ -764,15 +853,14 @@ export function ContributionForm({
                       maxLength={160}
                       placeholder="e.g. Mary Johnson"
                     />
-                    <FieldError name="proposedPersonName" />
                     <small>
                       Use the name you know. Reviewers can help with name variations and
                       identification.
                     </small>
-                  </label>
+                  </ValidatedField>
                 )}
                 {!draft.personId && (
-                  <label className={fieldClass('proposedOccupation')}>
+                  <ValidatedField name={'proposedOccupation'}>
                     <span>What did they do? (optional)</span>
                     <input
                       value={draft.proposedOccupation}
@@ -780,13 +868,12 @@ export function ContributionForm({
                       maxLength={160}
                       placeholder="e.g. Teacher, Pastor, Nurse"
                     />
-                    <FieldError name="proposedOccupation" />
                     <small>
                       Their occupation or role, as you know it. Reviewers add it as a tag.
                     </small>
-                  </label>
+                  </ValidatedField>
                 )}
-                <label className={fieldClass('title')}>
+                <ValidatedField name={'title'}>
                   <span>
                     Title <span className="community-required">*</span>
                   </span>
@@ -798,9 +885,8 @@ export function ContributionForm({
                     maxLength={160}
                     placeholder="e.g. Sunday visits to the family plot"
                   />
-                  <FieldError name="title" />
-                </label>
-                <label className={fieldClass('body')}>
+                </ValidatedField>
+                <ValidatedField name={'body'}>
                   <span>
                     {effectiveKind === 'memory' ? 'Your memory' : 'Your story or contribution'}{' '}
                     <span className="community-required">*</span>
@@ -814,13 +900,12 @@ export function ContributionForm({
                     rows={9}
                     placeholder="Tell it in your own words. What do you remember, or what would you like others to know?"
                   />
-                  <FieldError name="body" />
                   <small>
                     {draft.body.length.toLocaleString()} / 20,000 characters. A memory can be
                     personal; it does not need to be proven.
                   </small>
-                </label>
-                <label className="community-field">
+                </ValidatedField>
+                <ValidatedField name={'context'} className="community-field">
                   <span>
                     How do you know this story? <span className="community-hint">(optional)</span>
                   </span>
@@ -835,7 +920,7 @@ export function ContributionForm({
                     This context helps readers understand the perspective behind the contribution.
                     It may be shown publicly.
                   </small>
-                </label>
+                </ValidatedField>
                 <fieldset className="community-fieldset source-kind">
                   <legend>How do you know this?</legend>
                   <div className="source-kind-options">
@@ -863,7 +948,7 @@ export function ContributionForm({
                       </p>
                     )}
                     {sourceKind === 'document' && (
-                      <label className="community-field">
+                      <ValidatedField name={'sourceCreator'} className="community-field">
                         <span>
                           Original author or creator{' '}
                           <span className="community-hint">(optional)</span>
@@ -875,10 +960,10 @@ export function ContributionForm({
                           placeholder="e.g. Atlanta Daily World, 1952"
                         />
                         <small>Who originally wrote, created, or recorded this material?</small>
-                      </label>
+                      </ValidatedField>
                     )}
                     {sourceKind === 'account' && (
-                      <label className="community-field">
+                      <ValidatedField name={'narrator'} className="community-field">
                         <span>
                           Who told you? <span className="community-hint">(optional)</span>
                         </span>
@@ -889,10 +974,10 @@ export function ContributionForm({
                           placeholder="e.g. My grandmother, Ruth Hill"
                         />
                         <small>Only if the account was told by somebody other than you.</small>
-                      </label>
+                      </ValidatedField>
                     )}
                     {sourceKind === 'document' && (
-                      <label className="community-field">
+                      <ValidatedField name={'holdingInstitution'} className="community-field">
                         <span>
                           Where the material is kept{' '}
                           <span className="community-hint">(optional)</span>
@@ -903,44 +988,48 @@ export function ContributionForm({
                           maxLength={200}
                           placeholder="e.g. Auburn Avenue Research Library, or a family album"
                         />
-                      </label>
+                      </ValidatedField>
                     )}
                     {sourceKind !== 'memory' && (
-                      <div className={fieldClass('links')}>
+                      <ValidatedField as="div" name="links">
                         <span>
                           Links to sources <span className="community-hint">(optional)</span>
                         </span>
                         {draft.links.map((link, index) => (
                           <div className="community-link-row" key={index}>
-                            <input
-                              aria-label={`Link ${index + 1} title`}
-                              value={link.title}
-                              maxLength={200}
-                              placeholder="What is it? e.g. Obituary, 1968"
-                              onChange={(event) =>
-                                change(
-                                  'links',
-                                  draft.links.map((item, i) =>
-                                    i === index ? { ...item, title: event.target.value } : item,
-                                  ),
-                                )
-                              }
-                            />
-                            <input
-                              aria-label={`Link ${index + 1} address`}
-                              type="url"
-                              inputMode="url"
-                              value={link.url}
-                              placeholder="https://"
-                              onChange={(event) =>
-                                change(
-                                  'links',
-                                  draft.links.map((item, i) =>
-                                    i === index ? { ...item, url: event.target.value } : item,
-                                  ),
-                                )
-                              }
-                            />
+                            <ValidatedField as="div" name={`links.${index}.title`}>
+                              <input
+                                aria-label={`Link ${index + 1} title`}
+                                value={link.title}
+                                maxLength={200}
+                                placeholder="What is it? e.g. Obituary, 1968"
+                                onChange={(event) =>
+                                  change(
+                                    'links',
+                                    draft.links.map((item, i) =>
+                                      i === index ? { ...item, title: event.target.value } : item,
+                                    ),
+                                  )
+                                }
+                              />
+                            </ValidatedField>
+                            <ValidatedField as="div" name={`links.${index}.url`}>
+                              <input
+                                aria-label={`Link ${index + 1} address`}
+                                type="url"
+                                inputMode="url"
+                                value={link.url}
+                                placeholder="https://"
+                                onChange={(event) =>
+                                  change(
+                                    'links',
+                                    draft.links.map((item, i) =>
+                                      i === index ? { ...item, url: event.target.value } : item,
+                                    ),
+                                  )
+                                }
+                              />
+                            </ValidatedField>
                             <button
                               className="community-text-button"
                               type="button"
@@ -956,7 +1045,6 @@ export function ContributionForm({
                             </button>
                           </div>
                         ))}
-                        <FieldError name="links" />
                         {draft.links.length < 10 && (
                           <button
                             className="community-text-button"
@@ -971,11 +1059,11 @@ export function ContributionForm({
                         <small>
                           A web page, catalogue record, or article that supports this story.
                         </small>
-                      </div>
+                      </ValidatedField>
                     )}
                   </div>
                 </fieldset>
-                <div className="community-field">
+                <ValidatedField as="div" name="placeIds">
                   <span>
                     {knownPlaces.length
                       ? 'Is this about one of their places?'
@@ -1024,13 +1112,16 @@ export function ContributionForm({
                   )}
                   {(!knownPlaces.length || newPlace) && (
                     <>
-                      <input
-                        value={draft.placeName}
-                        onChange={(event) => change('placeName', event.target.value)}
-                        maxLength={160}
-                        placeholder="e.g. Section C, South-View Cemetery, or Wheat Street Baptist Church"
-                        aria-label="Place name"
-                      />
+                      <ValidatedField as="div" name="placeName">
+                        {' '}
+                        <input
+                          value={draft.placeName}
+                          onChange={(event) => change('placeName', event.target.value)}
+                          maxLength={160}
+                          placeholder="e.g. Section C, South-View Cemetery, or Wheat Street Baptist Church"
+                          aria-label="Place name"
+                        />
+                      </ValidatedField>
                       <LocationPicker
                         value={
                           draft.placeCoordinates
@@ -1044,7 +1135,7 @@ export function ContributionForm({
                       />
                     </>
                   )}
-                </div>
+                </ValidatedField>
               </div>
             </section>
             <details className="story-context-details community-more">
@@ -1077,7 +1168,7 @@ export function ContributionForm({
                   Up to five JPEG, PNG, or WebP images, no more than 10 MB each. A portrait is
                   welcome. Each photograph needs a caption, a creator, and your permission.
                 </p>
-                <div className="community-upload">
+                <ValidatedField as="div" name="photos" className="community-upload">
                   <ImagePlus size={30} strokeWidth={1.3} />
                   <strong>A face, a place, a moment remembered.</strong>
                   <p className="community-hint">
@@ -1094,7 +1185,7 @@ export function ContributionForm({
                     }}
                     disabled={photos.length >= 5 || recovering || recoveryBlocked}
                   />
-                </div>
+                </ValidatedField>
                 <div className="community-photo-list">
                   {photos.map((photo, index) => (
                     <div className="community-photo" key={photo.preview}>
@@ -1107,7 +1198,10 @@ export function ContributionForm({
                             caption or permissions.
                           </p>
                         )}
-                        <label className="community-field">
+                        <ValidatedField
+                          name={`photos.${index}.caption`}
+                          className="community-field"
+                        >
                           <span>Caption *</span>
                           <input
                             disabled={Boolean(photo.uploadedId)}
@@ -1119,8 +1213,11 @@ export function ContributionForm({
                             maxLength={500}
                             placeholder="e.g. The Hill family at the South-View gate, about 1960"
                           />
-                        </label>
-                        <label className="community-field">
+                        </ValidatedField>
+                        <ValidatedField
+                          name={`photos.${index}.creator`}
+                          className="community-field"
+                        >
                           <span>Photographer or creator *</span>
                           <input
                             disabled={Boolean(photo.uploadedId)}
@@ -1132,8 +1229,8 @@ export function ContributionForm({
                             maxLength={160}
                             placeholder="e.g. Ruth Hill, or “family collection”, or “unknown”"
                           />
-                        </label>
-                        <label className="community-field">
+                        </ValidatedField>
+                        <ValidatedField name={`photos.${index}.rights`} className="community-field">
                           <span>Rights and permission *</span>
                           <input
                             disabled={Boolean(photo.uploadedId)}
@@ -1143,8 +1240,12 @@ export function ContributionForm({
                             maxLength={1000}
                             placeholder="e.g. Owned by our family; South-View may display it online"
                           />
-                        </label>
-                        <label className="community-check" style={{ marginTop: 14 }}>
+                        </ValidatedField>
+                        <ValidatedField
+                          name={`photos.${index}.permission`}
+                          className="community-check"
+                          style={{ marginTop: 14 }}
+                        >
                           <input
                             disabled={Boolean(photo.uploadedId)}
                             type="checkbox"
@@ -1155,7 +1256,7 @@ export function ContributionForm({
                             required
                           />
                           <span>I have permission for South-View to display this photograph.</span>
-                        </label>
+                        </ValidatedField>
                         <button
                           className="community-text-button"
                           type="button"
@@ -1177,7 +1278,7 @@ export function ContributionForm({
               </div>
               <div className="community-fields">
                 <div className="community-two-columns">
-                  <label className={fieldClass('privateName')}>
+                  <ValidatedField name={'privateName'}>
                     <span>
                       Your name <span className="community-required">*</span>
                     </span>
@@ -1194,10 +1295,9 @@ export function ContributionForm({
                       maxLength={160}
                       autoComplete="name"
                     />
-                    <FieldError name="privateName" />
                     <small>Private. Used by the review team.</small>
-                  </label>
-                  <label className={fieldClass('email')}>
+                  </ValidatedField>
+                  <ValidatedField name={'email'}>
                     <span>
                       Email address <span className="community-required">*</span>
                     </span>
@@ -1212,11 +1312,29 @@ export function ContributionForm({
                       required
                       autoComplete="email"
                     />
-                    <FieldError name="email" />
                     <small>
                       Private. Reviewers may use it to reach you; the archive itself sends no email.
                     </small>
-                  </label>
+                  </ValidatedField>
+                  <ValidatedField name="phone">
+                    <span>
+                      Phone number <span className="community-hint">(optional)</span>
+                    </span>
+                    <input
+                      type="tel"
+                      autoComplete="tel"
+                      value={phone}
+                      maxLength={50}
+                      onChange={(event) => {
+                        setPhone(event.target.value);
+                        setFieldErrors(({ phone: _cleared, ...rest }) => rest);
+                      }}
+                      placeholder="e.g. (404) 555-0123"
+                    />
+                    <small>
+                      Private. Reviewers may use it to contact you about your contribution.
+                    </small>
+                  </ValidatedField>
                 </div>
                 <label className="community-check">
                   <input
@@ -1230,7 +1348,7 @@ export function ContributionForm({
                   </span>
                 </label>
                 {!draft.anonymous && (
-                  <label className={fieldClass('displayName')}>
+                  <ValidatedField name={'displayName'}>
                     <span>
                       Public display name <span className="community-required">*</span>
                     </span>
@@ -1241,12 +1359,21 @@ export function ContributionForm({
                       maxLength={160}
                       placeholder="e.g. The Hill family, or R. Hill"
                     />
-                    <FieldError name="displayName" />
                     <small>Only this name appears in the public contributor credit.</small>
-                  </label>
+                  </ValidatedField>
                 )}
               </div>
             </section>
+            <div ref={errorRef} tabIndex={-1}>
+              {error && (
+                <CommunityNotice kind="error" title="Your contribution has not been submitted">
+                  {error}
+                </CommunityNotice>
+              )}
+            </div>
+            <ValidatedField as="div" name="form" className="community-form-error">
+              {null}
+            </ValidatedField>
             <div className="community-actions">
               <button className="community-primary" type="submit">
                 {copy.reviewStory} <ArrowRight size={17} />
@@ -1376,9 +1503,14 @@ export function ContributionForm({
             <div className="community-review-line">
               <strong>Private contact</strong>
               {privateName} · {email}
+              {phone && ` · ${phone}`}
             </div>
             <CommunityNotice title="No email will be sent">{copy.noEmail}</CommunityNotice>
-            <label className="community-check" style={{ marginTop: 25 }}>
+            <ValidatedField
+              name={'permission'}
+              className="community-check"
+              style={{ marginTop: 25 }}
+            >
               <input
                 type="checkbox"
                 checked={permission}
@@ -1389,10 +1521,20 @@ export function ContributionForm({
                 text and photographs with the public credit shown above.
                 <small>
                   Archive reviewers check every contribution before it becomes public. Your private
-                  name and email address will not be displayed.
+                  name, email address, and phone number will not be displayed.
                 </small>
               </span>
-            </label>
+            </ValidatedField>
+            <div ref={errorRef} tabIndex={-1}>
+              {error && (
+                <CommunityNotice kind="error" title="Your contribution has not been submitted">
+                  {error}
+                </CommunityNotice>
+              )}
+            </div>
+            <ValidatedField as="div" name="form" className="community-form-error">
+              {null}
+            </ValidatedField>
             <div className="community-actions">
               <button
                 className="community-primary"
@@ -1468,6 +1610,6 @@ export function ContributionForm({
           </span>
         </p>
       </aside>
-    </div>
+    </FieldValidation>
   );
 }

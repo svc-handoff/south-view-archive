@@ -442,8 +442,9 @@ svg {
 .people-results {
   overflow: auto;
   flex: 1;
-  scrollbar-width: thin;
-  scrollbar-color: #c7c0b2 transparent;
+  scrollbar-width: auto;
+  scrollbar-gutter: stable;
+  scrollbar-color: #9b927f #eee9df;
 }
 .people-list {
   list-style: none;
@@ -2553,4 +2554,28 @@ svg {
   font-size: 17px;
   line-height: 1.8;
   margin: 10px 0;
+}
+
+.people-results::-webkit-scrollbar {
+  width: 16px;
+}
+.people-results::-webkit-scrollbar-track {
+  background: #eee9df;
+}
+.people-results::-webkit-scrollbar-thumb {
+  background: #9b927f;
+  border: 3px solid #eee9df;
+  border-radius: 8px;
+}
+.people-results::-webkit-scrollbar-thumb:hover {
+  background: #706650;
+}
+[data-validation-field] {
+  scroll-margin-block: 100px;
+}
+.community-check.has-error {
+  flex-wrap: wrap;
+}
+.community-check > .community-field-error {
+  flex-basis: 100%;
 }

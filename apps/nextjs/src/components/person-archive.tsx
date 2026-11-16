@@ -20,7 +20,7 @@ import { displayPersonName } from '@/lib/person-name';
 import { copy } from '@/lib/copy';
 import { PersonEditProvider } from './person-edit/context';
 import { AddSlot } from './person-edit/slot';
-import { EditEntryButton, EditToolbar } from './person-edit/toolbar';
+import { EditToolbar } from './person-edit/toolbar';
 
 /** "1897–1984", or "December 19, 1897 – November 11, 1984" when full dates are known. */
 function lifeSpan(person: Person) {
@@ -153,7 +153,6 @@ export function PersonArchive({
               <ArrowLeft size={18} aria-hidden="true" /> Back to the map
             </Link>
             <span className="archive-topbar-tools">
-              <EditEntryButton />
               <a className="archive-permalink" href={canonicalUrl}>
                 <ExternalLink size={16} aria-hidden="true" /> Permanent link
               </a>
@@ -538,10 +537,12 @@ export function PersonArchive({
                   </p>
                 )}
                 <AddSlot section="community" />
-                <EditEntryButton
-                  variant="button"
-                  label={copy.shareAbout(displayPersonName(person.name))}
-                />
+                <Link
+                  className="archive-button"
+                  href={`/contribute?person=${encodeURIComponent(person.id)}`}
+                >
+                  {copy.shareAbout(displayPersonName(person.name))}
+                </Link>
               </section>
 
               <section
@@ -588,7 +589,12 @@ export function PersonArchive({
               </div>
               <div className="archive-aside-card archive-contributors">
                 <p className="archive-eyebrow">Know something about this life?</p>
-                <EditEntryButton variant="button" label={copy.editPage} />
+                <Link
+                  className="archive-button"
+                  href={`/contribute?person=${encodeURIComponent(person.id)}`}
+                >
+                  Share a story
+                </Link>
                 <p className="archive-aside-help">
                   Add a memory, a photograph, a place, or a correction right where it belongs.
                   Reviewers approve it before it is public.
