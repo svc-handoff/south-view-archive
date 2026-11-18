@@ -10,7 +10,8 @@
     "./connection": "./src/connection.ts",
     "./community": "./src/community.ts",
     "./staff-edits": "./src/staff-edits.ts",
-    "./vet": "./src/vet.ts"
+    "./vet": "./src/vet.ts",
+    "./settings": "./src/settings.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

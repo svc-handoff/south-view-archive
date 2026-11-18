@@ -1282,3 +1282,13 @@ form.admin-link-editor {
   font-size: 13.5px;
   line-height: 1.45;
 }
+
+/* Archive admin: Settings tab. */
+.admin-settings {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 44rem;
+}
+.admin-settings .community-field small {
+  color: var(--muted);
+}

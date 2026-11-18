@@ -9,6 +9,7 @@ import {
   listReviewSubmissions,
 } from '@southview/db/community';
 import { beginVet, finishVet, latestVetRuns, requireVetReviewer } from '@southview/db/vet';
+import { getAiConnection } from '@southview/db/settings';
 import {
   VET_MODEL,
   vetReportSchema,
@@ -22,9 +23,11 @@ import { assertServer } from './config';
 import { getStorage, type PrivateStorage } from './storage';
 import { InvalidPhotoError, processPhoto } from './photos';
 
-export function vetConfigured() {
+/** Set up when a key is saved in the admin's Settings or OPENAI_API_KEY is set on the server. */
+export async function vetConfigured() {
   assertServer();
-  return process.env.ARCHIVE_DATA_MODE !== 'fixture' && !!process.env.OPENAI_API_KEY?.trim();
+  if (process.env.ARCHIVE_DATA_MODE === 'fixture') return false;
+  return !!(await getAiConnection(VET_MODEL)).apiKey;
 }
 export async function getVetOverview(
   actor: Actor,
@@ -33,7 +36,7 @@ export async function getVetOverview(
   requireVetReviewer(actor);
   const runs = await latestVetRuns(actor, records ?? (await listReviewSubmissions(actor)));
   return {
-    configured: vetConfigured(),
+    configured: await vetConfigured(),
     runs,
     runningSubmissionId:
       Object.values(runs).find((run) => run.status === 'running')?.submissionId ?? null,
@@ -271,15 +274,17 @@ export async function runVet(
 ) {
   assertServer();
   requireVetReviewer(actor);
-  if (!vetConfigured())
+  const connection =
+    process.env.ARCHIVE_DATA_MODE === 'fixture' ? null : await getAiConnection(VET_MODEL);
+  if (!connection?.apiKey)
     throw new DomainError(
       'BAD_REQUEST',
-      'Luna is not configured. Add OPENAI_API_KEY on the server to enable Vet.',
+      'Luna is not configured. Add an OpenAI key in Archive admin, Settings, to enable Vet.',
     );
   const record = await getSubmission(id, actor);
   if (!(await consumeRateLimit(`vet:${actor.userId}`, 20, 60 * 60 * 1000)))
     throw new DomainError('CONFLICT', 'The hourly Vet limit has been reached. Please try later.');
-  const run = await beginVet(record, actor);
+  const run = await beginVet(record, actor, connection.model);
   const attachments: VetAttachment[] = [];
   const signal = AbortSignal.timeout(240000);
   try {
@@ -317,15 +322,15 @@ export async function runVet(
     const client =
       dependencies.client ??
       new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        baseURL: 'https://api.openai.com/v1',
+        apiKey: connection.apiKey,
+        baseURL: connection.baseURL,
         timeout: 210000,
         maxRetries: 0,
         logLevel: 'off',
       });
     const response = await client.responses.create(
       {
-        model: VET_MODEL,
+        model: connection.model,
         reasoning: { effort: 'medium' },
         instructions,
         input: [

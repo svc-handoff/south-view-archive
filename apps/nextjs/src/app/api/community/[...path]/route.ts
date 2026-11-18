@@ -4,12 +4,19 @@ import { z, ZodError } from 'zod';
 import { dataMode } from '@southview/db/connection';
 import * as repository from '@southview/db/community';
 import * as staffEdits from '@southview/db/staff-edits';
+import {
+  getSettingsView,
+  getSiteStatus,
+  saveAiSettings,
+  saveSiteStatus,
+} from '@southview/db/settings';
 import { getSession, getSignInMethods, isReviewer } from '@southview/services/auth';
 import { savePhoto, InvalidPhotoError } from '@southview/services/photos';
 import { getStorage, MAX_PHOTO_BYTES, type PrivateStorage } from '@southview/services/storage';
 import { createUploadTicket, verifyUploadTicket } from '@southview/services/upload-ticket';
 import { getVetOverview, runVet } from '@southview/services/vet';
 import {
+  VET_MODEL,
   submissionInputSchema,
   photoMetadataSchema,
   reviewInputSchema,
@@ -178,6 +185,10 @@ async function handle(request: Request, context: Context): Promise<Response> {
     }
     if (mode === 'fixture')
       throw new HttpError(503, 'Contributions are unavailable in this read-only edition.');
+    // Kill switch: while staff have the site offline, only staff can use the API (to review and
+    // to bring the site back); visitors' requests, uploads and photos are refused.
+    if ((await getSiteStatus()).offline && !(await actorFor(request)).reviewer)
+      throw new HttpError(503, 'The South-View archive is temporarily offline.');
     if (method !== 'GET') {
       requireWriteOrigin(request);
       await limit(request, 'requests', 240);
@@ -242,6 +253,17 @@ async function handle(request: Request, context: Context): Promise<Response> {
     if (path[0] === 'admin') {
       if (!actor.reviewer) throw new HttpError(403, 'Staff access is required.');
       const [, area, id, action] = path;
+      // Site settings: the AI review connection and the kill switch.
+      if (area === 'settings' && !id && method === 'GET')
+        return json(await getSettingsView(actor, VET_MODEL));
+      if (area === 'settings' && id === 'ai' && !action && method === 'POST') {
+        await saveAiSettings(await bodyJSON(request), actor);
+        return json(await getSettingsView(actor, VET_MODEL));
+      }
+      if (area === 'settings' && id === 'site' && !action && method === 'POST') {
+        await saveSiteStatus(await bodyJSON(request), actor);
+        return json(await getSettingsView(actor, VET_MODEL));
+      }
       if (area === 'persons' && id && !action && method === 'GET')
         return json({ edits: await staffEdits.listStaffEdits({ personId: id }, actor) });
       if (area === 'persons' && id && !action && method === 'POST')

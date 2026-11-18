@@ -49,15 +49,16 @@ export function parseReviewState(params: { get(name: string): string | null }): 
     submission: params.get('submission')?.slice(0, 120) || null,
   };
 }
-/** The admin's areas: the contribution queue, people, graves at South-View, and places in Atlanta. */
-export type AdminTab = 'contributions' | 'people' | 'graves' | 'places';
-export type AdminRecordTab = Exclude<AdminTab, 'contributions'>;
+/** The admin's areas: the contribution queue, people, graves at South-View, places in Atlanta, and site settings. */
+export type AdminTab = 'contributions' | 'people' | 'graves' | 'places' | 'settings';
+export type AdminRecordTab = Exclude<AdminTab, 'contributions' | 'settings'>;
 /** /admin/people, /admin/people/<id>, and the same for graves and places. */
 export function adminRecordUrl(tab: AdminRecordTab, id: string | null) {
   return `/admin/${tab}${id ? `/${encodeURIComponent(id)}` : ''}`;
 }
 /** Which area and record an admin address shows. */
 export function parseAdminPath(pathname: string): { tab: AdminTab; recordId: string | null } {
+  if (/^\/admin\/settings\/?$/.test(pathname)) return { tab: 'settings', recordId: null };
   const match = pathname.match(/^\/admin\/(people|graves|places)(?:\/([^/]+))?\/?$/);
   if (!match) return { tab: 'contributions', recordId: null };
   return {

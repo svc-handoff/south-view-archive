@@ -75,7 +75,8 @@ export async function latestVetRuns(actor: Actor, records: SubmissionRecord[]) {
   }
   return runs;
 }
-export async function beginVet(record: SubmissionRecord, actor: Actor) {
+/** Records which model actually ran (staff may change it in the admin). */
+export async function beginVet(record: SubmissionRecord, actor: Actor, model: string = VET_MODEL) {
   requireVetReviewer(actor);
   if (record.status === 'draft')
     throw new DomainError('BAD_REQUEST', 'Submit this draft before running Vet.');
@@ -91,7 +92,7 @@ export async function beginVet(record: SubmissionRecord, actor: Actor) {
           randomUUID(),
           record.id,
           actor.userId,
-          VET_MODEL,
+          model,
           VET_PROMPT_VERSION,
           vetInputRevision(record),
         ],

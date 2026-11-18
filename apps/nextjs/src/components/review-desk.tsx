@@ -11,6 +11,7 @@ import {
   LoaderCircle,
   RefreshCw,
   MapPin,
+  Settings,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -54,6 +55,7 @@ import {
 import { CommunityNotice } from './community-shell';
 import { PeopleAdmin } from './people-admin';
 import { PlacesAdmin } from './places-admin';
+import { SettingsAdmin } from './settings-admin';
 import { useAdminArchive } from './admin-data';
 import { StoryContextFields } from './story-context-fields';
 import { RecordPicker } from './record-picker';
@@ -278,7 +280,7 @@ export function ReviewDesk({
     startTab === 'places' ? initialRecordId : null,
   );
   useEffect(() => {
-    if (startTab !== initialTab && startTab !== 'contributions')
+    if (startTab !== initialTab && startTab !== 'contributions' && startTab !== 'settings')
       window.history.replaceState(null, '', adminRecordUrl(startTab, initialRecordId));
   }, [startTab, initialTab, initialRecordId]);
   // Server data with every change saved during this visit applied, shared by the record tabs.
@@ -461,7 +463,9 @@ export function ReviewDesk({
       '',
       next === 'contributions'
         ? reviewUrl(state)
-        : recordUrl(
+        : next === 'settings'
+          ? '/admin/settings'
+          : recordUrl(
             next,
             recordId ??
               (next === 'people' ? adminPerson : next === 'graves' ? adminGrave : adminPlace),
@@ -479,6 +483,7 @@ export function ReviewDesk({
       people: 'People · ',
       graves: 'Graves · ',
       places: 'Places · ',
+      settings: 'Settings · ',
       contributions: '',
     };
     document.title = `${area[tab]}Archive admin · South-View`;
@@ -514,7 +519,9 @@ export function ReviewDesk({
           href={`/sign-in?next=${encodeURIComponent(
             initialTab === 'contributions'
               ? '/admin/contributions'
-              : adminRecordUrl(initialTab, initialRecordId),
+              : initialTab === 'settings'
+                ? '/admin/settings'
+                : adminRecordUrl(initialTab, initialRecordId),
           )}`}
         >
           Sign in to review <ArrowRight size={17} />
@@ -569,9 +576,14 @@ export function ReviewDesk({
         <button role="tab" aria-selected={tab === 'places'} onClick={() => switchTab('places')}>
           <MapPin size={17} aria-hidden="true" /> Places
         </button>
+        <button role="tab" aria-selected={tab === 'settings'} onClick={() => switchTab('settings')}>
+          <Settings size={17} aria-hidden="true" /> Settings
+        </button>
       </div>
       {error && <CommunityNotice kind="error">{error}</CommunityNotice>}
-      {tab === 'people' ? (
+      {tab === 'settings' ? (
+        <SettingsAdmin />
+      ) : tab === 'people' ? (
         <PeopleAdmin
           key={`people-${nav}`}
           archive={admin.archive}

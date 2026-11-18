@@ -173,7 +173,7 @@ test('real SDK transport, private persistence, permissions, concurrency, citatio
     'configuration and staff authorization fail closed without creating a run',
     async () => {
       delete process.env.OPENAI_API_KEY;
-      assert.equal(vetConfigured(), false);
+      assert.equal(await vetConfigured(), false);
       await assert.rejects(runVet(id, reviewer), /not configured/);
       process.env.OPENAI_API_KEY = 'test-key-not-real';
       await assert.rejects(runVet(id, guest), { code: 'FORBIDDEN' });
@@ -181,7 +181,7 @@ test('real SDK transport, private persistence, permissions, concurrency, citatio
       await assert.rejects(getVetOverview({ ...reviewer, reviewer: false }), { code: 'FORBIDDEN' });
       assert.equal((await store.query('SELECT * FROM community.vet_runs')).rows.length, 0);
       process.env.ARCHIVE_DATA_MODE = 'fixture';
-      assert.equal(vetConfigured(), false);
+      assert.equal(await vetConfigured(), false);
       process.env.ARCHIVE_DATA_MODE = 'local';
     },
   );
