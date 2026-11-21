@@ -43,7 +43,8 @@
   width: var(--sidebar-width, 360px);
   max-width: calc(100% - 32px);
   height: auto;
-  max-height: calc(100% - 128px);
+  /* Ends above the legend in the bottom-left corner (about 87px tall, 16px from the edge). */
+  max-height: calc(100% - 196px);
   border: 1px solid #ded9cd;
   border-radius: 12px;
   box-shadow: 0 3px 14px #302d2824;
@@ -671,6 +672,12 @@
   border-radius: 6px;
   pointer-events: none;
   font-size: 12px;
+}
+/* With a person open the legend gains the "only this person" control, about 36px taller. */
+@media (min-width: 761px) {
+  .map-explorer.has-selection .people-sidebar {
+    max-height: calc(100% - 232px);
+  }
 }
 @media (max-width: 1000px) and (min-width: 761px) {
   .map-explorer .people-sidebar {

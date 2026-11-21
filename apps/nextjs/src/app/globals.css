@@ -444,7 +444,7 @@ svg {
   flex: 1;
   scrollbar-width: auto;
   scrollbar-gutter: stable;
-  scrollbar-color: #9b927f #eee9df;
+  scrollbar-color: #c7c0b2 transparent;
 }
 .people-list {
   list-style: none;
@@ -2564,19 +2564,19 @@ svg {
   }
 }
 .people-results::-webkit-scrollbar {
-  width: 24px;
+  width: 12px;
 }
 .people-results::-webkit-scrollbar-track {
-  background: #eee9df;
+  background: transparent;
 }
 .people-results::-webkit-scrollbar-thumb {
-  background: #9b927f;
-  border: 2px solid #eee9df;
-  border-radius: 12px;
+  background: #c7c0b2;
+  border: 3px solid #fffcf9;
+  border-radius: 6px;
   min-height: 44px;
 }
 .people-results::-webkit-scrollbar-thumb:hover {
-  background: #706650;
+  background: #9b927f;
 }
 [data-validation-field] {
   scroll-margin-block: 100px;
